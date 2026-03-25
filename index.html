@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abrir Chamado</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Abertura de Chamado</h2>
+
+  <input id="nome" placeholder="Nome">
+  <input id="setor" placeholder="Setor">
+  <textarea id="descricao" placeholder="Problema"></textarea>
+
+  <select id="prioridade">
+    <option>Baixa</option>
+    <option>Média</option>
+    <option>Alta</option>
+  </select>
+
+  <input type="file" id="foto">
+
+  <button onclick="enviar()">Enviar</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+async function enviar() {
+  let file = document.getElementById("foto").files[0];
+  let foto_url = null;
+
+  if (file) {
+    let nomeArquivo = Date.now() + "_" + file.name;
+
+    await supabaseClient.storage
+      .from("fotos")
+      .upload(nomeArquivo, file);
+
+    foto_url = `https://kmxmyjvxncteacojmbaj.supabase.co/storage/v1/object/public/fotos/${nomeArquivo}`;
+  }
+
+  await supabaseClient.from("chamados").insert([{
+    nome: document.getElementById("nome").value,
+    setor: document.getElementById("setor").value,
+    descricao: document.getElementById("descricao").value,
+    prioridade: document.getElementById("prioridade").value,
+    status: "Aberto",
+    foto_url: foto_url
+  }]);
+
+  alert("Chamado enviado!");
+}
+</script>
+
+</body>
+</html>
