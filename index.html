@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abertura de Chamado</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #1e3a8a;
+}
+
+.container {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.logo {
+  display: block;
+  margin: auto;
+  width: 120px;
+}
+
+input, select, textarea, button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <img src="logo.png" class="logo">
+
+  <h2>Abertura de Chamado Manutenção</h2>
+
+  <input id="nome" placeholder="Nome">
+
+  <select id="unidade">
+    <option value="">Selecione a unidade</option>
+    <option>Atlântica Matriz</option>
+    <option>CD Kasa Granitos</option>
+    <option>Max Vidros</option>
+    <option>Perfilmaster</option>
+    <option>Uvolt Solar</option>
+  </select>
+
+  <input id="setor" placeholder="Setor">
+
+  <textarea id="descricao" maxlength="200" placeholder="Problema (máx 200 caracteres)"></textarea>
+
+  <select id="prioridade">
+    <option>Normal</option>
+    <option>Urgente</option>
+  </select>
+
+  <button onclick="enviar()">Enviar</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+async function enviar() {
+  let nome = document.getElementById("nome").value;
+  let unidade = document.getElementById("unidade").value;
+  let setor = document.getElementById("setor").value;
+  let descricao = document.getElementById("descricao").value;
+  let prioridade = document.getElementById("prioridade").value;
+
+  await supabaseClient.from("chamados").insert([{
+    nome,
+    unidade,
+    setor,
+    descricao,
+    prioridade,
+    status: "Aberto"
+  }]);
+
+  alert("Chamado enviado!");
+}
+</script>
+
+</body>
+</html>
