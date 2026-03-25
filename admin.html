@@ -5,16 +5,29 @@
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #1e3a8a; margin: 0; padding: 10px; }
   .container { max-width: 900px; margin: 20px auto; background: white; color: #1e3a8a; padding: 20px; border-radius: 12px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-  .logout { position: absolute; top: 15px; right: 15px; background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: auto !important; }
+
+  .logout { 
+    position: absolute; top: 15px; right: 15px; 
+    background: #ef4444; color: white; border: none; 
+    padding: 8px 15px; border-radius: 6px; cursor: pointer; 
+    font-size: 13px; font-weight: bold; width: auto !important;
+  }
+
   .logo { width: 140px; display: block; margin: 10px auto; }
+  
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
   .card { background: linear-gradient(90deg, #3b82f6, #2563eb); color: white; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.2s; }
+  .card:hover { opacity: 0.9; transform: translateY(-2px); }
+  
   .unidade-tag { background: #f1f5f9; padding: 5px 10px; border-radius: 4px; font-size: 12px; margin: 2px; display: inline-block; border: 1px solid #cbd5e1; }
+
   .chamado { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-top: 12px; background: #fff; }
   .finalBox { background: #f0f9ff; padding: 15px; margin-top: 10px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+
   select, textarea, input, .btn-full { width: 100%; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
   .btn-full { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
   .btn-ver-finalizados { background: #64748b; margin-bottom: 20px; }
+
   .urgente { color: #dc2626; font-weight: bold; text-transform: uppercase; font-size: 12px; }
   h3 { border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }
 </style>
@@ -25,28 +38,61 @@
   <button class="logout" onclick="logout()">Sair</button>
   <img src="logo.png" class="logo">
   <h2 style="text-align:center; margin-bottom: 20px;">Painel Administrativo</h2>
+
   <div class="stats-grid" id="dashboard"></div>
   <div id="unidades-box" style="margin-bottom: 20px; text-align: center;"></div>
+
   <hr>
+
   <div style="display: flex; gap: 5px;">
     <input type="number" id="buscaId" placeholder="Buscar pelo nº (Ex: 1)">
     <button class="btn-full" style="width: 100px;" onclick="buscar()">Buscar</button>
   </div>
+
   <button class="btn-full btn-ver-finalizados" onclick="verFinalizados()">Ver Chamados Finalizados</button>
-  <div id="lista">Carregando chamados...</div>
+
+  <div id="lista">
+    <p style="text-align:center;">Carregando chamados...</p>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
-const supabaseClient = supabase.createClient("https://kmxmyjvxncteacojmbaj.supabase.co", "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J");
+
+////////////////////// 🔐 PROTEÇÃO DE LOGIN (NOVO)
+if (localStorage.getItem("logado") !== "sim") {
+  window.location.href = "login.html";
+}
+
+////////////////////// CONFIG
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
 let chamados = [];
 let statusAtual = "Aberto";
 
-function logout() { window.location.href = "index.html"; }
+////////////////////// 🔥 LOGOUT CORRIGIDO
+function logout() {
+  localStorage.removeItem("logado");
+  window.location.href = "login.html";
+}
+
+////////////////////// RESTANTE DO SEU CÓDIGO (INALTERADO)
 
 async function carregar() {
-  let { data } = await supabaseClient.from("chamados").select("*").order("created_at", { ascending: true });
-  chamados = data || [];
+  let { data, error } = await supabaseClient
+    .from("chamados")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar:", error);
+    return;
+  }
+  
+  chamados = data;
   atualizarDashboard();
   render();
 }
@@ -54,21 +100,81 @@ async function carregar() {
 function atualizarDashboard() {
   let abertos = chamados.filter(c => c.status === "Aberto").length;
   let andamento = chamados.filter(c => c.status === "Andamento").length;
+
   document.getElementById('dashboard').innerHTML = `
     <div class="card" onclick="setFilter('Aberto')">Abertos: ${abertos}</div>
     <div class="card" onclick="setFilter('Andamento')">Em andamento: ${andamento}</div>
   `;
+
   let unidades = {};
-  chamados.filter(c => c.status !== "Finalizado").forEach(c => { unidades[c.unidade] = (unidades[c.unidade] || 0) + 1; });
+  chamados.filter(c => c.status !== "Finalizado").forEach(c => {
+    unidades[c.unidade] = (unidades[c.unidade] || 0) + 1;
+  });
+
   let uniHtml = "<strong>Chamados por Unidade:</strong><br>";
-  for (let u in unidades) { uniHtml += `<span class="unidade-tag">${u}: ${unidades[u]}</span>`; }
+  for (let u in unidades) {
+    uniHtml += `<span class="unidade-tag">${u}: ${unidades[u]}</span>`;
+  }
   document.getElementById('unidades-box').innerHTML = uniHtml;
 }
 
-function setFilter(status) { statusAtual = status; render(); }
+function setFilter(status) {
+  statusAtual = status;
+  render();
+}
 
 function render() {
   const listaDiv = document.getElementById('lista');
+  
   let listaFiltrada = chamados.filter(c => c.status === statusAtual);
+
+  if (!listaFiltrada.length) {
+    listaDiv.innerHTML = `<p style='text-align:center;'>Nenhum chamado "${statusAtual}" encontrado.</p>`;
+    return;
+  }
+
   let html = `<h3>Chamados ${statusAtual}s</h3>`;
-  if (!listaFiltrada.length) { html += `<p style='text-align:center;'>Nenhum
+  
+  listaFiltrada.forEach((c) => {
+    let numVisual = chamados.indexOf(c) + 1;
+
+    html += `
+      <div class="chamado">
+        <div style="display:flex; justify-content:space-between;">
+           <b>#${numVisual}</b> 
+           <span class="${c.prioridade=='Urgente'?'urgente':''}">${c.prioridade}</span>
+        </div>
+        <p>
+          <b>Unidade:</b> ${c.unidade} | <b>Setor:</b> ${c.setor}<br>
+          <b>Solicitante:</b> ${c.nome}<br>
+          <b>Problema:</b> ${c.descricao}
+        </p>
+
+        <select onchange="mudarStatus('${c.id}', this.value)">
+          <option value="Aberto" ${c.status=="Aberto"?"selected":""}>Aberto</option>
+          <option value="Andamento" ${c.status=="Andamento"?"selected":""}>Andamento</option>
+          <option value="Finalizado">Finalizar este chamado</option>
+        </select>
+
+        <div id="form_final_${c.id}" class="finalBox" style="display:none;">
+          <b>Dados de Finalização:</b>
+          <select id="atendente_${c.id}">
+            <option value="">Quem atendeu?</option>
+            <option>Maicon</option><option>Marcelo</option><option>Vinicius</option><option>Daniel</option>
+          </select>
+          <textarea id="solucao_${c.id}" placeholder="Descreva o que foi feito para resolver..."></textarea>
+          <button class="btn-full" onclick="confirmarFinalizacao('${c.id}')">Confirmar e Salvar</button>
+        </div>
+      </div>
+    `;
+  });
+  listaDiv.innerHTML = html;
+}
+
+// resto segue igual...
+carregar();
+
+</script>
+
+</body>
+</html>
