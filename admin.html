@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #1e3a8a; margin: 0; padding: 10px; }
+  .container { max-width: 900px; margin: 20px auto; background: white; color: #1e3a8a; padding: 20px; border-radius: 12px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+  /* BOTÃO SAIR - AGORA PEQUENO E NO CANTO */
+  .logout { 
+    position: absolute; top: 15px; right: 15px; 
+    background: #ef4444; color: white; border: none; 
+    padding: 8px 15px; border-radius: 6px; cursor: pointer; 
+    font-size: 13px; font-weight: bold; width: auto !important; /* !important para vencer o width 100% */
+  }
+
+  .logo { width: 140px; display: block; margin: 10px auto; }
+  
+  /* DASHBOARD E CARDS */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .card { background: linear-gradient(90deg, #3b82f6, #2563eb); color: white; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.2s; }
+  .card:hover { opacity: 0.9; transform: translateY(-2px); }
+  
+  .unidade-tag { background: #f1f5f9; padding: 5px 10px; border-radius: 4px; font-size: 12px; margin: 2px; display: inline-block; border: 1px solid #cbd5e1; }
+
+  /* CHAMADO */
+  .chamado { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-top: 12px; background: #fff; }
+  .finalBox { background: #f0f9ff; padding: 15px; margin-top: 10px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+
+  /* INPUTS GERAIS */
+  select, textarea, input, .btn-full { width: 100%; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+  .btn-full { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
+  .btn-ver-finalizados { background: #64748b; margin-bottom: 20px; }
+
+  .urgente { color: #dc2626; font-weight: bold; text-transform: uppercase; font-size: 12px; }
+  h3 { border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <button class="logout" onclick="logout()">Sair</button>
+  <img src="logo.png" class="logo">
+  <h2 style="text-align:center; margin-bottom: 20px;">Painel de Controle</h2>
+
+  <div class="stats-grid" id="dashboard">
+    </div>
+
+  <div id="unidades-box" style="margin-bottom: 20px; text-align: center;">
+    </div>
+
+  <hr>
+
+  <div style="display: flex; gap: 5px;">
+    <input type="number" id="buscaId" placeholder="Nº do chamado">
+    <button class="btn-full" style="width: 100px;" onclick="buscar()">Buscar</button>
+  </div>
+
+  <button class="btn-full btn-ver-finalizados" onclick="verFinalizados()">Ver Chamados Finalizados</button>
+
+  <div id="lista">
+    <p style="text-align:center;">Carregando chamados...</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+let chamados = [];
+let statusAtual = "Aberto";
+
+function logout() { location.reload(); }
+
+async function carregar() {
+  let { data, error } = await supabaseClient.from("chamados").select("*").order("created_at", { ascending: false });
+  if (error) return console.error(error);
+  
+  chamados = data;
+
+  // Atualiza Dashboard de Status
+  let abertos = data.filter(c => c.status === "Aberto").length;
+  let andamento = data.filter(c => c.status === "Andamento").length;
+
+  document.getElementById('dashboard').innerHTML = `
+    <div class="card" onclick="setFilter('Aberto')">Abertos: ${abertos}</div>
+    <div class="card" onclick="setFilter('Andamento')">Em andamento: ${andamento}</div>
+  `;
+
+  // Atualiza Resumo por Unidade
+  let unidades = {};
+  data.filter(c => c.status !== "Finalizado").forEach(c => {
+    unidades[c.unidade] = (unidades[c.unidade] || 0) + 1;
+  });
+
+  let uniHtml = "<strong>Por Unidade:</strong><br>";
+  for (let u in unidades) {
+    uniHtml += `<span class="unidade-tag">${u}: ${unidades[u]}</span>`;
+  }
+  document.getElementById('unidades-box').innerHTML = uniHtml;
+
+  render();
+}
+
+function setFilter(status) {
+  statusAtual = status;
+  render();
+}
+
+function render() {
+  const listaDiv = document.getElementById('lista');
+  let listaFiltrada = chamados.filter(c => c.status === statusAtual);
+
+  if (!listaFiltrada.length) {
+    listaDiv.innerHTML = `<p style='text-align:center;'>Nenhum chamado "${statusAtual}" encontrado.</p>`;
+    return;
+  }
+
+  let html = `<h3>Lista: ${statusAtual}s</h3>`;
+  listaFiltrada.forEach((c) => {
+    // Usamos o ID real do banco para não confundir com a posição do array
+    html += `
+      <div class="chamado">
+        <div style="display:flex; justify-content:space-between;">
+           <b>#${c.id}</b> 
+           <span class="${c.prioridade=='Urgente'?'urgente':''}">${c.prioridade}</span>
+        </div>
+        <p>
+          <b>Unidade:</b> ${c.unidade} | <b>Setor:</b> ${c.setor}<br>
+          <b>Solicitante:</b> ${c.nome}<br>
+          <b>Descrição:</b> ${c.descricao}
+        </p>
+
+        <select onchange="mudar('${c.id}', this.value)">
+          <option value="Aberto" ${c.status=="Aberto"?"selected":""}>Aberto</option>
+          <option value="Andamento" ${c.status=="Andamento"?"selected":""}>Andamento</option>
+          <option value="Finalizado">Finalizar Chamado</option>
+        </select>
+
+        <div id="final_${c.id}" class="finalBox" style="display:none;">
+          <b>Finalização do Chamado:</b>
+          <select id="nome_${c.id}">
+            <option value="">Quem atendeu?</option>
+            <option>Maicon</option><option>Marcelo</option><option>Vinicius</option><option>Daniel</option>
+          </select>
+          <textarea id="solucao_${c.id}" placeholder="Descreva a solução técnica..."></textarea>
+          <button class="btn-full" onclick="finalizar('${c.id}')">Confirmar Encerramento</button>
+        </div>
+      </div>
+    `;
+  });
+  listaDiv.innerHTML = html;
+}
+
+async function mudar(id, status) {
+  if (status === "Finalizado") {
+    document.getElementById("final_" + id).style.display = "block";
+  } else {
+    await supabaseClient.from("chamados").update({ status }).eq("id", id);
+    carregar();
+  }
+}
+
+async function finalizar(id) {
+  let atendente = document.getElementById("nome_" + id).value;
+  let solucao = document.getElementById("solucao_" + id).value;
+
+  if (!atendente || !solucao) {
+    alert("Por favor, informe o atendente e a solução.");
+    return;
+  }
+
+  const { error } = await supabaseClient.from("chamados").update({
+    status: "Finalizado",
+    atendido_por: atendente,
+    solucao: solucao,
+    finalizado_em: new Date()
+  }).eq("id", id);
+
+  if (!error) {
+    alert("Chamado #" + id + " finalizado!");
+    await carregar(); // Recarrega os dados e limpa a lista atual
+  }
+}
+
+function verFinalizados() {
+  statusAtual = "Finalizado";
+  let listaFinal = chamados.filter(c => c.status === "Finalizado");
+
+  if (!listaFinal.length) {
+    document.getElementById('lista').innerHTML = "<h3>Finalizados</h3><p>Nenhum chamado finalizado.</p>";
+    return;
+  }
+
+  let html = "<h3>Histórico de Finalizados</h3>";
+  listaFinal.forEach((c) => {
+    html += `
+      <div class="chamado" onclick="toggle('${c.id}')" style="border-left: 5px solid #10b981; cursor:pointer;">
+        <b>#${c.id}</b> - ${c.unidade} - ${c.descricao.substring(0,30)}...
+        <div id="det_${c.id}" class="finalBox" style="display:none;">
+          <p><b>Aberto por:</b> ${c.nome} (${c.setor})</p>
+          <p><b>✅ Atendido por:</b> ${c.atendido_por || "Não informado"}</p>
+          <p><b>🛠 Solução:</b> ${c.solucao || "Sem descrição"}</p>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('lista').innerHTML = html;
+}
+
+function toggle(id) {
+  let el = document.getElementById("det_" + id);
+  el.style.display = el.style.display === "block" ? "none" : "block";
+}
+
+async function buscar() {
+  let idBusca = document.getElementById("buscaId").value;
+  if (!idBusca) return;
+  
+  let c = chamados.find(item => item.id == idBusca);
+  if (!c) { alert("Chamado não encontrado"); return; }
+
+  document.getElementById('lista').innerHTML = `
+    <h3>Resultado da Busca</h3>
+    <div class="chamado">
+      <b>#${c.id}</b> [${c.status}]<br>
+      <b>Unidade:</b> ${c.unidade}<br>
+      <b>Problema:</b> ${c.descricao}<br><br>
+      ${c.status === 'Finalizado' ? `<b>Atendido por:</b> ${c.atendido_por}<br><b>Solução:</b> ${c.solucao}` : 'Chamado ainda em aberto.'}
+      <button class="btn-full" onclick="carregar()" style="margin-top:10px; background:#64748b;">Voltar</button>
+    </div>
+  `;
+}
+
+carregar();
+</script>
+</body>
+</html>
