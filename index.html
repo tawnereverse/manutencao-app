@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chamados Manutenção</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+  <img src="logo.png" class="logo">
+
+  <h2>Abertura de Chamado Manutenção Grupo Atlântica</h2>
+
+  <input id="nome" placeholder="Nome">
+  <input id="setor" placeholder="Setor">
+  <textarea id="descricao" placeholder="Descreva o problema"></textarea>
+
+  <select id="prioridade">
+    <option>Baixa</option>
+    <option>Média</option>
+    <option>Alta</option>
+  </select>
+
+  <input type="file" id="foto">
+
+  <button onclick="enviar()">Enviar Chamado</button>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+async function enviar() {
+  try {
+
+    let nome = document.getElementById("nome").value.trim();
+    let setor = document.getElementById("setor").value.trim();
+    let descricao = document.getElementById("descricao").value.trim();
+    let prioridade = document.getElementById("prioridade").value;
+
+    let file = document.getElementById("foto").files[0];
+    let foto_url = null;
+
+    // Upload da imagem
+    if (file) {
+      let nomeArquivo = Date.now() + "_" + file.name;
+
+      let { error: uploadError } = await supabaseClient.storage
+        .from("fotos")
+        .upload(nomeArquivo, file);
+
+      if (uploadError) {
+        alert("Erro ao enviar imagem");
+        return;
+      }
+
+      foto_url = `https://kmxmyjvxncteacojmbaj.supabase.co/storage/v1/object/public/fotos/${nomeArquivo}`;
+    }
+
+    // Inserir no banco
+    let { error } = await supabaseClient.from("chamados").insert([{
+      nome,
+      setor,
+      descricao,
+      prioridade,
+      status: "Aberto",
+      foto_url
+    }]);
+
+    if (error) {
+      alert("Erro ao salvar chamado");
+      return;
+    }
+
+    alert("Chamado enviado com sucesso!");
+
+    // Limpar campos
+    document.getElementById("nome").value = "";
+    document.getElementById("setor").value = "";
+    document.getElementById("descricao").value = "";
+
+  } catch (err) {
+    alert("Erro inesperado");
+    console.error(err);
+  }
+}
+</script>
+
+</body>
+</html>
