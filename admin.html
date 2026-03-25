@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial;
+  background: #1e3a8a;
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 20px auto;
+  background: white;
+  color: #1e3a8a;
+  padding: 20px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.logo {
+  width: 120px;
+  display: block;
+  margin: auto;
+}
+
+.logout {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.card {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 14px;
+  margin-top: 10px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.chamado {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+select, textarea, button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+}
+
+.finalBox {
+  background: #f0f9ff;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<button class="logout" onclick="logout()">Sair</button>
+
+<img src="logo.png" class="logo">
+<h2 style="text-align:center;">Painel</h2>
+
+<input type="number" id="buscaId" placeholder="Buscar chamado pelo número" style="width:100%;padding:8px;margin-top:10px;">
+<button onclick="buscar()">Buscar</button>
+
+<div id="dashboard"></div>
+
+<select id="filtroUnidade" onchange="carregarChamados()" style="display:none;"></select>
+
+<button onclick="verFinalizados()">Ver Finalizados</button>
+
+<div id="lista"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+let statusAtual = "";
+let chamadosGlobal = [];
+
+// LOGOUT REAL
+function logout() {
+  localStorage.clear();
+  location.href = "admin.html";
+}
+
+// DASHBOARD
+async function carregarDashboard() {
+  let { data } = await supabaseClient.from("chamados").select("*").order("created_at");
+
+  chamadosGlobal = data;
+
+  let abertos = data.filter(c => c.status === "Aberto").length;
+  let andamento = data.filter(c => c.status === "Andamento").length;
+
+  dashboard.innerHTML = `
+    <div class="card" onclick="abrir('Aberto')">Abertos: ${abertos}</div>
+    <div class="card" onclick="abrir('Andamento')">Em andamento: ${andamento}</div>
+  `;
+}
+
+// ABRIR LISTA
+function abrir(status) {
+  statusAtual = status;
+  carregarChamados();
+}
+
+// BUSCA
+function buscar() {
+  let num = document.getElementById("buscaId").value;
+
+  if (!num) return;
+
+  let c = chamadosGlobal[num - 1];
+
+  if (!c) {
+    alert("Não encontrado");
+    return;
+  }
+
+  mostrarChamado(c, num);
+}
+
+// LISTA
+function carregarChamados() {
+
+  let filtrados = chamadosGlobal.filter(c => c.status === statusAtual);
+
+  let html = "";
+
+  filtrados.forEach((c, index) => {
+
+    let numero = chamadosGlobal.indexOf(c) + 1;
+
+    html += `
+      <div class="chamado">
+        <b>#${numero}</b><br>
+        ${c.descricao}
+
+        <select onchange="mudar('${c.id}', this.value)">
+          <option ${c.status=="Aberto"?"selected":""}>Aberto</option>
+          <option ${c.status=="Andamento"?"selected":""}>Andamento</option>
+          <option>Finalizado</option>
+        </select>
+
+        <div id="final_${c.id}" style="display:none;">
+          <select id="nome_${c.id}">
+            <option value="">Atendido por</option>
+            <option>Maicon</option>
+            <option>Marcelo</option>
+            <option>Vinicius</option>
+            <option>Daniel</option>
+          </select>
+
+          <textarea id="solucao_${c.id}" placeholder="Escreva aqui a solução aplicada"></textarea>
+
+          <button onclick="finalizar('${c.id}')">Finalizar</button>
+        </div>
+      </div>
+    `;
+  });
+
+  lista.innerHTML = html;
+}
+
+// MUDAR STATUS
+function mudar(id, status) {
+  if (status === "Finalizado") {
+    document.getElementById("final_" + id).style.display = "block";
+  } else {
+    atualizar(id, status);
+  }
+}
+
+// FINALIZAR
+async function finalizar(id) {
+  let nome = document.getElementById("nome_" + id).value;
+  let solucao = document.getElementById("solucao_" + id).value;
+
+  if (!nome || !solucao) {
+    alert("Preencha tudo");
+    return;
+  }
+
+  await supabaseClient.from("chamados").update({
+    status: "Finalizado",
+    atendido_por: nome,
+    solucao
+  }).eq("id", id);
+
+  alert("Finalizado com sucesso");
+
+  carregarDashboard();
+  carregarChamados();
+}
+
+// UPDATE
+async function atualizar(id, status) {
+  await supabaseClient.from("chamados").update({ status }).eq("id", id);
+  carregarDashboard();
+  carregarChamados();
+}
+
+// FINALIZADOS
+function verFinalizados() {
+
+  let finalizados = chamadosGlobal.filter(c => c.status === "Finalizado");
+
+  let html = "<h3>Finalizados</h3>";
+
+  finalizados.forEach((c, i) => {
+
+    let numero = chamadosGlobal.indexOf(c) + 1;
+
+    html += `
+      <div class="chamado">
+        <b>#${numero}</b> - ${c.descricao}
+
+        <div class="finalBox">
+          <b>Atendido por:</b> ${c.atendido_por || "-"}<br>
+          <b>Solução:</b> ${c.solucao || "-"}
+        </div>
+      </div>
+    `;
+  });
+
+  lista.innerHTML = html;
+}
+
+// START
+carregarDashboard();
+</script>
+
+</body>
+</html>
