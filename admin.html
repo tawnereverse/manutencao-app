@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Admin</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+th {
+  background: #1e3a8a;
+  color: white;
+}
+
+td:nth-child(3) {
+  max-width: 320px;
+  word-wrap: break-word;
+}
+
+.status-Aberto { color: red; font-weight: bold; }
+.status-Andamento { color: orange; font-weight: bold; }
+.status-Finalizado { color: green; font-weight: bold; }
+
+.dashboard {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.card {
+  background: #3b82f6;
+  color: white;
+  padding: 10px;
+  margin: 5px;
+  border-radius: 8px;
+  display: inline-block;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="loginBox">
+  <img src="logo.png" class="logo">
+  <h2>Login</h2>
+  <input id="login" placeholder="Usuário">
+  <input id="senha" type="password" placeholder="Senha">
+  <button onclick="entrar()">Entrar</button>
+</div>
+
+<div class="container" id="adminBox" style="display:none;">
+  <img src="logo.png" class="logo">
+
+  <h2>Painel de Chamados</h2>
+
+  <button onclick="logout()">Sair</button>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard" id="dashboard"></div>
+
+  <!-- FILTROS -->
+  <select id="filtroStatus" onchange="carregar()">
+    <option value="">Status</option>
+    <option>Aberto</option>
+    <option>Andamento</option>
+    <option>Finalizado</option>
+  </select>
+
+  <select id="filtroPrioridade" onchange="carregar()">
+    <option value="">Prioridade</option>
+    <option>Baixa</option>
+    <option>Média</option>
+    <option>Alta</option>
+  </select>
+
+  <select id="ordenacao" onchange="carregar()">
+    <option value="desc">Mais recentes</option>
+    <option value="asc">Mais antigos</option>
+  </select>
+
+  <table id="tabela"></table>
+</div>
+
+<audio id="som" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+let ultimoTotal = 0;
+
+// LOGIN
+async function entrar() {
+  let login = document.getElementById("login").value.trim();
+  let senha = document.getElementById("senha").value.trim();
+
+  let { data } = await supabaseClient
+    .from("usuarios")
+    .select("*")
+    .eq("login", login)
+    .eq("senha", senha);
+
+  if (!data.length) return alert("Login inválido");
+
+  localStorage.setItem("logado", "sim");
+  localStorage.setItem("tipo", data[0].tipo);
+
+  iniciarPainel();
+}
+
+function logout() {
+  localStorage.clear();
+  location.reload();
+}
+
+// DASHBOARD
+function montarDashboard(data) {
+  let total = data.length;
+
+  let porUnidade = {};
+  let porPrioridade = {};
+
+  data.forEach(c => {
+    porUnidade[c.unidade] = (porUnidade[c.unidade] || 0) + 1;
+    porPrioridade[c.prioridade] = (porPrioridade[c.prioridade] || 0) + 1;
+  });
+
+  let html = `<h3>Total: ${total}</h3>`;
+
+  html += "<h4>Por Unidade</h4>";
+  for (let u in porUnidade) {
+    html += `<div class="card">${u}: ${porUnidade[u]}</div>`;
+  }
+
+  html += "<h4>Ranking</h4>";
+  let ranking = Object.entries(porUnidade).sort((a,b)=>b[1]-a[1]);
+
+  ranking.forEach(r => {
+    html += `<div class="card">${r[0]} (${r[1]})</div>`;
+  });
+
+  document.getElementById("dashboard").innerHTML = html;
+
+  // 🔔 ALERTA
+  if (total > ultimoTotal) {
+    document.getElementById("som").play();
+  }
+
+  ultimoTotal = total;
+}
+
+// CARREGAR
+async function carregar() {
+  let status = document.getElementById("filtroStatus").value;
+  let prioridade = document.getElementById("filtroPrioridade").value;
+  let ordem = document.getElementById("ordenacao").value;
+
+  let query = supabaseClient
+    .from("chamados")
+    .select("*")
+    .order("created_at", { ascending: ordem === "asc" });
+
+  if (status) query = query.eq("status", status);
+  if (prioridade) query = query.eq("prioridade", prioridade);
+
+  let { data } = await query;
+
+  montarDashboard(data);
+
+  let html = `
+    <tr>
+      <th>Unidade</th>
+      <th>Setor</th>
+      <th>Problema</th>
+      <th>Prioridade</th>
+      <th>Foto</th>
+      <th>Status</th>
+      <th>Ação</th>
+    </tr>
+  `;
+
+  data.forEach(c => {
+    html += `
+      <tr>
+        <td>${c.unidade}</td>
+        <td>${c.setor}</td>
+        <td>${c.descricao}</td>
+        <td>${c.prioridade}</td>
+        <td>${c.foto_url ? `<img src="${c.foto_url}" width="60">` : "-"}</td>
+        <td>${c.status}</td>
+        <td>
+          <select onchange="atualizarStatus('${c.id}', this.value)">
+            <option ${c.status=="Aberto"?"selected":""}>Aberto</option>
+            <option ${c.status=="Andamento"?"selected":""}>Andamento</option>
+            <option ${c.status=="Finalizado"?"selected":""}>Finalizado</option>
+          </select>
+
+          ${
+            localStorage.getItem("tipo") === "admin"
+              ? `<button onclick="deletar('${c.id}')">Excluir</button>`
+              : ""
+          }
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("tabela").innerHTML = html;
+}
+
+async function atualizarStatus(id, status) {
+  await supabaseClient.from("chamados").update({ status }).eq("id", id);
+  carregar();
+}
+
+async function deletar(id) {
+  if (!confirm("Excluir?")) return;
+  await supabaseClient.from("chamados").delete().eq("id", id);
+  carregar();
+}
+
+function iniciarPainel() {
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("adminBox").style.display = "block";
+  carregar();
+
+  setInterval(carregar, 5000); // atualização automática
+}
+
+if (localStorage.getItem("logado")) iniciarPainel();
+</script>
+
+</body>
+</html>
