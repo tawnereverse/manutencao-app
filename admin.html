@@ -209,7 +209,7 @@ function render() {
           </select>
 
           <label>Solução</label>
-          <textarea id="sol_${c.id}" maxlength="200" placeholder="Descreva a solução (máx 200 caracteres)"></textarea>
+          <textarea id="sol_${c.id}" maxlength="200"></textarea>
 
           <button onclick="finalizar('${c.id}')">Salvar</button>
         </div>
@@ -235,7 +235,6 @@ async function finalizar(id){
   let sol = document.getElementById("sol_"+id).value;
 
   if(!nome || !sol) return alert("Preencha todos os campos");
-  if(sol.length > 200) return alert("Máximo 200 caracteres");
 
   await db.from("chamados").update({
     status:"Finalizado",
@@ -259,9 +258,16 @@ function verFinalizados(){
   dados.filter(x=>x.status=="Finalizado").forEach(c=>{
     html+=`
       <div class="chamado" onclick="toggle('${c.id}')" style="cursor:pointer">
-        <b>#${c.numero}</b> - ${c.descricao}
+        <b>#${c.numero}</b> - ${c.descricao}<br>
+        <small>${c.unidade} | ${c.setor} | ${c.nome}</small>
+
         <div id="d_${c.id}" class="final">
+          <b>Aberto por:</b> ${c.nome}<br>
+          <b>Unidade:</b> ${c.unidade}<br>
+          <b>Setor:</b> ${c.setor}<br><br>
+
           <b>Atendido por:</b> ${c.atendido_por}<br><br>
+
           <b>Solução:</b><br>${c.solucao}
         </div>
       </div>

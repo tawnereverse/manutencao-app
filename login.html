@@ -1,3 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial;
+  background: #1e3a8a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 300px;
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Login</h2>
+
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+
+  <button onclick="logar()">Entrar</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
@@ -10,14 +67,14 @@ async function logar(){
   let user = document.getElementById("user").value;
   let pass = document.getElementById("pass").value;
 
-  // LOGIN FIXO (mantém admin funcionando)
+  // ADMIN FIXO
   if(user === "admin" && pass === "123"){
     localStorage.setItem("logado","sim");
     location.href = "admin.html";
     return;
   }
 
-  // LOGIN DINÂMICO
+  // LOGIN BANCO
   let { data } = await db
     .from("usuarios")
     .select("*")
@@ -33,3 +90,6 @@ async function logar(){
   }
 }
 </script>
+
+</body>
+</html>
