@@ -2,16 +2,15 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
 body {
   font-family: Arial;
   background: #1e3a8a;
-  margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  margin: 0;
 }
 
 .box {
@@ -22,14 +21,8 @@ body {
   text-align: center;
 }
 
-/* LOGO */
 .logo {
   width: 140px;
-  margin-bottom: 10px;
-}
-
-h2 {
-  color: #1e3a8a;
   margin-bottom: 10px;
 }
 
@@ -37,8 +30,6 @@ input {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
 }
 
 button {
@@ -48,9 +39,6 @@ button {
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
 }
 
 .erro {
@@ -63,31 +51,23 @@ button {
 <body>
 
 <div class="box">
-
-  <!-- LOGO -->
   <img src="logo.png" class="logo">
+  <h2>Painel</h2>
 
-  <h2>Painel de Manutenção</h2>
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
 
-  <input type="text" id="usuario" placeholder="Usuário">
-  <input type="password" id="senha" placeholder="Senha">
-
-  <button onclick="logar()">Entrar</button>
-
-  <div id="erro" class="erro"></div>
-
+  <button onclick="login()">Entrar</button>
+  <div id="erro"></div>
 </div>
 
 <script>
-function logar() {
-  let user = document.getElementById("usuario").value;
-  let pass = document.getElementById("senha").value;
-
-  if (user === "admin" && pass === "123") {
+function login() {
+  if (user.value === "admin" && pass.value === "123") {
     localStorage.setItem("logado", "sim");
-    window.location.href = "admin.html";
+    location.href = "admin.html";
   } else {
-    document.getElementById("erro").innerText = "Usuário ou senha inválidos";
+    erro.innerText = "Login inválido";
   }
 }
 </script>

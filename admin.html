@@ -2,178 +2,237 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #1e3a8a; margin: 0; padding: 10px; }
-  .container { max-width: 900px; margin: 20px auto; background: white; color: #1e3a8a; padding: 20px; border-radius: 12px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+body { font-family: Arial; background: #1e3a8a; margin: 0; }
 
-  .logout { 
-    position: absolute; top: 15px; right: 15px; 
-    background: #ef4444; color: white; border: none; 
-    padding: 8px 15px; border-radius: 6px; cursor: pointer; 
-    font-size: 13px; font-weight: bold; width: auto !important;
-  }
+.container {
+  max-width: 900px;
+  margin: 20px auto;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  position: relative;
+}
 
-  .logo { width: 140px; display: block; margin: 10px auto; }
-  
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .card { background: linear-gradient(90deg, #3b82f6, #2563eb); color: white; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.2s; }
-  .card:hover { opacity: 0.9; transform: translateY(-2px); }
-  
-  .unidade-tag { background: #f1f5f9; padding: 5px 10px; border-radius: 4px; font-size: 12px; margin: 2px; display: inline-block; border: 1px solid #cbd5e1; }
+.logout {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
 
-  .chamado { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-top: 12px; background: #fff; }
-  .finalBox { background: #f0f9ff; padding: 15px; margin-top: 10px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+.logo {
+  width: 120px;
+  display: block;
+  margin: auto;
+}
 
-  select, textarea, input, .btn-full { width: 100%; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
-  .btn-full { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
-  .btn-ver-finalizados { background: #64748b; margin-bottom: 20px; }
+.card {
+  background: #2563eb;
+  color: white;
+  padding: 12px;
+  margin-top: 10px;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-  .urgente { color: #dc2626; font-weight: bold; text-transform: uppercase; font-size: 12px; }
-  h3 { border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }
+.chamado {
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+
+.final {
+  background: #eef6ff;
+  padding: 10px;
+  margin-top: 10px;
+  display: none;
+}
 </style>
+
 </head>
+
 <body>
 
 <div class="container">
-  <button class="logout" onclick="logout()">Sair</button>
-  <img src="logo.png" class="logo">
-  <h2 style="text-align:center; margin-bottom: 20px;">Painel Administrativo</h2>
 
-  <div class="stats-grid" id="dashboard"></div>
-  <div id="unidades-box" style="margin-bottom: 20px; text-align: center;"></div>
+<button class="logout" onclick="logout()">Sair</button>
 
-  <hr>
+<img src="logo.png" class="logo">
+<h2 style="text-align:center;">Painel</h2>
 
-  <div style="display: flex; gap: 5px;">
-    <input type="number" id="buscaId" placeholder="Buscar pelo nº (Ex: 1)">
-    <button class="btn-full" style="width: 100px;" onclick="buscar()">Buscar</button>
-  </div>
+<input id="busca" placeholder="Buscar nº">
+<button onclick="buscar()">Buscar</button>
 
-  <button class="btn-full btn-ver-finalizados" onclick="verFinalizados()">Ver Chamados Finalizados</button>
+<div id="dashboard"></div>
 
-  <div id="lista">
-    <p style="text-align:center;">Carregando chamados...</p>
-  </div>
+<button onclick="verFinalizados()">Finalizados</button>
+
+<div id="lista"></div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 <script>
 
-////////////////////// 🔐 PROTEÇÃO DE LOGIN (NOVO)
+// PROTEÇÃO
 if (localStorage.getItem("logado") !== "sim") {
-  window.location.href = "login.html";
+  location.href = "login.html";
 }
 
-////////////////////// CONFIG
-const supabaseClient = supabase.createClient(
+const db = supabase.createClient(
   "https://kmxmyjvxncteacojmbaj.supabase.co",
   "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
 );
 
-let chamados = [];
+let dados = [];
 let statusAtual = "Aberto";
 
-////////////////////// 🔥 LOGOUT CORRIGIDO
+// LOGOUT
 function logout() {
   localStorage.removeItem("logado");
-  window.location.href = "login.html";
+  location.href = "login.html";
 }
 
-////////////////////// RESTANTE DO SEU CÓDIGO (INALTERADO)
+// CARREGAR
+async function load() {
+  let { data } = await db.from("chamados").select("*").order("numero");
 
-async function carregar() {
-  let { data, error } = await supabaseClient
-    .from("chamados")
-    .select("*")
-    .order("created_at", { ascending: true });
+  dados = data;
 
-  if (error) {
-    console.error("Erro ao carregar:", error);
-    return;
-  }
-  
-  chamados = data;
-  atualizarDashboard();
-  render();
-}
-
-function atualizarDashboard() {
-  let abertos = chamados.filter(c => c.status === "Aberto").length;
-  let andamento = chamados.filter(c => c.status === "Andamento").length;
-
-  document.getElementById('dashboard').innerHTML = `
-    <div class="card" onclick="setFilter('Aberto')">Abertos: ${abertos}</div>
-    <div class="card" onclick="setFilter('Andamento')">Em andamento: ${andamento}</div>
+  dashboard.innerHTML = `
+    <div class="card" onclick="filtro('Aberto')">Abertos: ${data.filter(x=>x.status=='Aberto').length}</div>
+    <div class="card" onclick="filtro('Andamento')">Andamento: ${data.filter(x=>x.status=='Andamento').length}</div>
   `;
 
-  let unidades = {};
-  chamados.filter(c => c.status !== "Finalizado").forEach(c => {
-    unidades[c.unidade] = (unidades[c.unidade] || 0) + 1;
-  });
-
-  let uniHtml = "<strong>Chamados por Unidade:</strong><br>";
-  for (let u in unidades) {
-    uniHtml += `<span class="unidade-tag">${u}: ${unidades[u]}</span>`;
-  }
-  document.getElementById('unidades-box').innerHTML = uniHtml;
-}
-
-function setFilter(status) {
-  statusAtual = status;
   render();
 }
 
+// FILTRO
+function filtro(s) {
+  statusAtual = s;
+  render();
+}
+
+// RENDER
 function render() {
-  const listaDiv = document.getElementById('lista');
-  
-  let listaFiltrada = chamados.filter(c => c.status === statusAtual);
+  let listaFiltrada = dados.filter(x=>x.status==statusAtual);
 
   if (!listaFiltrada.length) {
-    listaDiv.innerHTML = `<p style='text-align:center;'>Nenhum chamado "${statusAtual}" encontrado.</p>`;
+    lista.innerHTML = "Nenhum chamado";
     return;
   }
 
-  let html = `<h3>Chamados ${statusAtual}s</h3>`;
-  
-  listaFiltrada.forEach((c) => {
-    let numVisual = chamados.indexOf(c) + 1;
+  let html = "";
 
+  listaFiltrada.forEach(c => {
     html += `
       <div class="chamado">
-        <div style="display:flex; justify-content:space-between;">
-           <b>#${numVisual}</b> 
-           <span class="${c.prioridade=='Urgente'?'urgente':''}">${c.prioridade}</span>
-        </div>
-        <p>
-          <b>Unidade:</b> ${c.unidade} | <b>Setor:</b> ${c.setor}<br>
-          <b>Solicitante:</b> ${c.nome}<br>
-          <b>Problema:</b> ${c.descricao}
-        </p>
+        <b>#${c.numero}</b><br>
+        ${c.descricao}<br>
+        ${c.unidade} | ${c.setor} | ${c.nome}
 
-        <select onchange="mudarStatus('${c.id}', this.value)">
-          <option value="Aberto" ${c.status=="Aberto"?"selected":""}>Aberto</option>
-          <option value="Andamento" ${c.status=="Andamento"?"selected":""}>Andamento</option>
-          <option value="Finalizado">Finalizar este chamado</option>
+        <select onchange="mudar('${c.id}',this.value)">
+          <option ${c.status=="Aberto"?"selected":""}>Aberto</option>
+          <option ${c.status=="Andamento"?"selected":""}>Andamento</option>
+          <option>Finalizado</option>
         </select>
 
-        <div id="form_final_${c.id}" class="finalBox" style="display:none;">
-          <b>Dados de Finalização:</b>
-          <select id="atendente_${c.id}">
-            <option value="">Quem atendeu?</option>
-            <option>Maicon</option><option>Marcelo</option><option>Vinicius</option><option>Daniel</option>
-          </select>
-          <textarea id="solucao_${c.id}" placeholder="Descreva o que foi feito para resolver..."></textarea>
-          <button class="btn-full" onclick="confirmarFinalizacao('${c.id}')">Confirmar e Salvar</button>
+        <div id="f_${c.id}" class="final">
+          <input id="nome_${c.id}" placeholder="Atendido por">
+          <textarea id="sol_${c.id}" placeholder="Solução"></textarea>
+          <button onclick="finalizar('${c.id}')">Salvar</button>
         </div>
       </div>
     `;
   });
-  listaDiv.innerHTML = html;
+
+  lista.innerHTML = html;
 }
 
-// resto segue igual...
-carregar();
+// STATUS
+function mudar(id,status) {
+  if (status=="Finalizado") {
+    document.getElementById("f_"+id).style.display="block";
+  } else {
+    update(id,status);
+  }
+}
 
+// FINALIZAR
+async function finalizar(id){
+  let nome = document.getElementById("nome_"+id).value;
+  let sol = document.getElementById("sol_"+id).value;
+
+  if(!nome || !sol) return alert("Preencha");
+
+  await db.from("chamados").update({
+    status:"Finalizado",
+    atendido_por:nome,
+    solucao:sol
+  }).eq("id",id);
+
+  load();
+}
+
+// UPDATE
+async function update(id,status){
+  await db.from("chamados").update({status}).eq("id",id);
+  load();
+}
+
+// FINALIZADOS
+function verFinalizados(){
+  let html = "<h3>Finalizados</h3>";
+
+  dados.filter(x=>x.status=="Finalizado").forEach(c=>{
+    html+=`
+      <div class="chamado" onclick="toggle('${c.id}')">
+        #${c.numero} - ${c.descricao}
+        <div id="d_${c.id}" class="final">
+          ${c.atendido_por}<br>
+          ${c.solucao}
+        </div>
+      </div>
+    `;
+  });
+
+  lista.innerHTML = html;
+}
+
+// DETALHE
+function toggle(id){
+  let el = document.getElementById("d_"+id);
+  el.style.display = el.style.display=="block"?"none":"block";
+}
+
+// BUSCAR
+function buscar(){
+  let n = busca.value;
+  let c = dados.find(x=>x.numero==n);
+
+  if(!c) return alert("Não encontrado");
+
+  lista.innerHTML = `
+    <div class="chamado">
+      #${c.numero}<br>
+      ${c.descricao}<br>
+      ${c.status}<br>
+      ${c.atendido_por || "-"}<br>
+      ${c.solucao || "-"}
+    </div>
+  `;
+}
+
+load();
 </script>
 
 </body>
