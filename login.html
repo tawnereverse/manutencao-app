@@ -70,11 +70,12 @@ async function logar(){
   // ADMIN FIXO
   if(user === "admin" && pass === "123"){
     localStorage.setItem("logado","sim");
+    localStorage.setItem("usuario", user);
     location.href = "admin.html";
     return;
   }
 
-  // LOGIN BANCO (CORRIGIDO)
+  // LOGIN BANCO
   let { data } = await db
     .from("usuarios")
     .select("*")
@@ -84,6 +85,7 @@ async function logar(){
 
   if(data){
     localStorage.setItem("logado","sim");
+    localStorage.setItem("usuario", user);
     location.href = "admin.html";
   } else {
     alert("Login inválido");
