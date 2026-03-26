@@ -135,7 +135,6 @@ button {
 
 <script>
 
-// PROTEÇÃO
 if (localStorage.getItem("logado") !== "sim") {
   location.href = "login.html";
 }
@@ -148,13 +147,11 @@ const db = supabase.createClient(
 let dados = [];
 let statusAtual = "Aberto";
 
-// LOGOUT
 function logout() {
   localStorage.removeItem("logado");
   location.href = "login.html";
 }
 
-// CARREGAR
 async function load() {
   let { data } = await db.from("chamados").select("*").order("numero");
   dados = data;
@@ -167,13 +164,11 @@ async function load() {
   render();
 }
 
-// FILTRO
 function filtro(s) {
   statusAtual = s;
   render();
 }
 
-// RENDER
 function render() {
   let listaFiltrada = dados.filter(x=>x.status==statusAtual);
 
@@ -198,7 +193,6 @@ function render() {
         </select>
 
         <div id="f_${c.id}" class="final">
-          
           <label>Atendido por</label>
           <select id="nome_${c.id}">
             <option value="">Selecione</option>
@@ -220,7 +214,6 @@ function render() {
   lista.innerHTML = html;
 }
 
-// STATUS
 function mudar(id,status) {
   if (status=="Finalizado") {
     document.getElementById("f_"+id).style.display="block";
@@ -229,7 +222,6 @@ function mudar(id,status) {
   }
 }
 
-// FINALIZAR
 async function finalizar(id){
   let nome = document.getElementById("nome_"+id).value;
   let sol = document.getElementById("sol_"+id).value;
@@ -245,13 +237,11 @@ async function finalizar(id){
   load();
 }
 
-// UPDATE
 async function update(id,status){
   await db.from("chamados").update({status}).eq("id",id);
   load();
 }
 
-// FINALIZADOS
 function verFinalizados(){
   let html = "<h3>Finalizados</h3>";
 
@@ -277,13 +267,11 @@ function verFinalizados(){
   lista.innerHTML = html;
 }
 
-// DETALHE
 function toggle(id){
   let el = document.getElementById("d_"+id);
   el.style.display = el.style.display=="block"?"none":"block";
 }
 
-// BUSCAR
 function buscar(){
   let n = busca.value;
   let c = dados.find(x=>x.numero==n);
@@ -301,15 +289,15 @@ function buscar(){
   `;
 }
 
-// ✅ CRIAR USUÁRIO (CORRIGIDO)
+// ✅ CORREÇÃO FINAL AQUI
 async function criarUsuario(){
   let user = document.getElementById("novo_user").value;
   let pass = document.getElementById("novo_pass").value;
 
   if(!user || !pass) return alert("Preencha");
 
-  let { data, error } = await db.from("usuarios").insert([
-    { usuario: user, senha: pass }
+  let { error } = await db.from("usuarios").insert([
+    { login: user, senha: pass }
   ]);
 
   if(error){
@@ -321,7 +309,6 @@ async function criarUsuario(){
   alert("Usuário criado com sucesso!");
 }
 
-// INIT
 load();
 
 </script>

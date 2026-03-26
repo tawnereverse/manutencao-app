@@ -74,11 +74,11 @@ async function logar(){
     return;
   }
 
-  // LOGIN BANCO
+  // LOGIN BANCO (CORRIGIDO)
   let { data } = await db
     .from("usuarios")
     .select("*")
-    .eq("usuario", user)
+    .eq("login", user)
     .eq("senha", pass)
     .single();
 
