@@ -4,7 +4,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body { font-family: Arial; background: #1e3a8a; margin: 0; }
+body {
+  font-family: Arial;
+  background: #1e3a8a;
+  margin: 0;
+}
 
 .container {
   max-width: 950px;
@@ -25,14 +29,20 @@ body { font-family: Arial; background: #1e3a8a; margin: 0; }
   border: none;
   padding: 8px 14px;
   border-radius: 8px;
+  cursor: pointer;
 }
 
-.logo { width: 120px; display: block; margin: auto; }
+.logo {
+  width: 120px;
+  display: block;
+  margin: auto;
+}
 
 .bemvindo {
   text-align: center;
-  font-weight: bold;
   margin-top: 10px;
+  font-weight: bold;
+  color: #1e3a8a;
 }
 
 .card {
@@ -43,6 +53,7 @@ body { font-family: Arial; background: #1e3a8a; margin: 0; }
   text-align: center;
   border-radius: 10px;
   cursor: pointer;
+  font-weight: bold;
 }
 
 .chamado {
@@ -58,19 +69,44 @@ body { font-family: Arial; background: #1e3a8a; margin: 0; }
   padding: 12px;
   margin-top: 10px;
   display: none;
+  border-radius: 8px;
 }
 
-input, textarea {
-  width: 100%;
-  margin-top: 5px;
+input, select, textarea {
   padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-textarea { height: 100px; }
+textarea {
+  height: 100px;
+  resize: none;
+}
 
-.top-bar { display:flex; gap:10px; margin-bottom:15px; }
-.top-bar input { flex:1; }
+button {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.top-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.top-bar input {
+  flex: 1;
+}
 </style>
+
 </head>
 
 <body>
@@ -80,12 +116,15 @@ textarea { height: 100px; }
 <button class="logout" onclick="logout()">Sair</button>
 
 <img src="logo.png" class="logo">
-<div class="bemvindo">Bem-vindo, <span id="userLogado"></span></div>
+
+<div class="bemvindo">
+  Bem-vindo, <span id="userLogado"></span>
+</div>
 
 <h2 style="text-align:center;">Painel</h2>
 
 <div class="top-bar">
-  <input id="busca" placeholder="Buscar nº">
+  <input id="busca" placeholder="Buscar nº do chamado">
   <button onclick="buscar()">Buscar</button>
 </div>
 
@@ -110,7 +149,8 @@ textarea { height: 100px; }
 
 <script>
 
-if(localStorage.getItem("logado") !== "sim"){
+// PROTEÇÃO
+if (localStorage.getItem("logado") !== "sim") {
   location.href = "login.html";
 }
 
@@ -119,9 +159,11 @@ const db = supabase.createClient(
   "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
 );
 
+// USUÁRIO LOGADO
 let usuarioLogado = localStorage.getItem("usuario");
 document.getElementById("userLogado").innerText = usuarioLogado;
 
+// CONTROLE DE PERMISSÃO
 if(usuarioLogado !== "admin"){
   document.getElementById("areaAdmin").style.display = "none";
 }
@@ -129,12 +171,15 @@ if(usuarioLogado !== "admin"){
 let dados = [];
 let statusAtual = "Aberto";
 
-function logout(){
-  localStorage.clear();
+// LOGOUT
+function logout() {
+  localStorage.removeItem("logado");
+  localStorage.removeItem("usuario");
   location.href = "login.html";
 }
 
-async function load(){
+// CARREGAR
+async function load() {
   let { data } = await db.from("chamados").select("*").order("numero");
   dados = data;
 
@@ -146,23 +191,29 @@ async function load(){
   render();
 }
 
-function filtro(s){ statusAtual = s; render(); }
+// FILTRO
+function filtro(s) {
+  statusAtual = s;
+  render();
+}
 
-function render(){
+// RENDER
+function render() {
   let listaFiltrada = dados.filter(x=>x.status==statusAtual);
+
+  if (!listaFiltrada.length) {
+    lista.innerHTML = "Nenhum chamado";
+    return;
+  }
 
   let html = "";
 
-  listaFiltrada.forEach(c=>{
-    html+=`
+  listaFiltrada.forEach(c => {
+    html += `
       <div class="chamado">
         <b>#${c.numero}</b><br>
         ${c.descricao}<br>
-        <small>${c.unidade} | ${c.setor} | ${c.nome}</small>
-
-        ${c.atendido_por ? `<br><small><b>Em atendimento por:</b> ${c.atendido_por}</small>` : ""}
-
-        <br><br>
+        <small>${c.unidade} | ${c.setor} | ${c.nome}</small><br><br>
 
         <select onchange="mudar('${c.id}',this.value)">
           <option ${c.status=="Aberto"?"selected":""}>Aberto</option>
@@ -171,69 +222,20 @@ function render(){
         </select>
 
         <div id="f_${c.id}" class="final">
-          <textarea id="sol_${c.id}" placeholder="Solução"></textarea>
+          <label>Atendido por</label>
+          <select id="nome_${c.id}">
+            <option value="">Selecione</option>
+            <option>Maicon</option>
+            <option>Marcelo</option>
+            <option>Daniel</option>
+            <option>Vinicius</option>
+          </select>
+
+          <label>Solução</label>
+          <textarea id="sol_${c.id}" maxlength="200"></textarea>
+
           <button onclick="finalizar('${c.id}')">Salvar</button>
         </div>
-      </div>
-    `;
-  });
-
-  lista.innerHTML = html || "Nenhum chamado";
-}
-
-function mudar(id,status){
-  if(status=="Finalizado"){
-    document.getElementById("f_"+id).style.display="block";
-  } else {
-    update(id,status);
-  }
-}
-
-async function update(id,status){
-  let dadosUpdate = { status };
-
-  if(status === "Andamento"){
-    dadosUpdate.atendido_por = usuarioLogado;
-    dadosUpdate.iniciado_por = usuarioLogado;
-    dadosUpdate.data_inicio = new Date();
-  }
-
-  await db.from("chamados").update(dadosUpdate).eq("id",id);
-  load();
-}
-
-async function finalizar(id){
-  let sol = document.getElementById("sol_"+id).value;
-
-  if(!sol) return alert("Preencha");
-
-  await db.from("chamados").update({
-    status:"Finalizado",
-    finalizado_por: usuarioLogado,
-    data_fim: new Date(),
-    solucao: sol
-  }).eq("id",id);
-
-  load();
-}
-
-function verFinalizados(){
-  let html = "<h3>Finalizados</h3>";
-
-  dados.filter(x=>x.status=="Finalizado").forEach(c=>{
-    html+=`
-      <div class="chamado">
-        <b>#${c.numero}</b><br>
-        ${c.descricao}<br>
-
-        <small>${c.unidade} | ${c.setor} | ${c.nome}</small><br><br>
-
-        <b>Iniciado por:</b> ${c.iniciado_por}<br>
-        <b>Finalizado por:</b> ${c.finalizado_por}<br>
-        <b>Início:</b> ${new Date(c.data_inicio).toLocaleString()}<br>
-        <b>Fim:</b> ${new Date(c.data_fim).toLocaleString()}<br><br>
-
-        <b>Solução:</b><br>${c.solucao}
       </div>
     `;
   });
@@ -241,29 +243,105 @@ function verFinalizados(){
   lista.innerHTML = html;
 }
 
+// STATUS
+function mudar(id,status) {
+  if (status=="Finalizado") {
+    document.getElementById("f_"+id).style.display="block";
+  } else {
+    update(id,status);
+  }
+}
+
+// FINALIZAR
+async function finalizar(id){
+  let nome = document.getElementById("nome_"+id).value;
+  let sol = document.getElementById("sol_"+id).value;
+
+  if(!nome || !sol) return alert("Preencha todos os campos");
+
+  await db.from("chamados").update({
+    status:"Finalizado",
+    atendido_por:nome,
+    solucao:sol
+  }).eq("id",id);
+
+  load();
+}
+
+// UPDATE
+async function update(id,status){
+  await db.from("chamados").update({status}).eq("id",id);
+  load();
+}
+
+// FINALIZADOS
+function verFinalizados(){
+  let html = "<h3>Finalizados</h3>";
+
+  dados.filter(x=>x.status=="Finalizado").forEach(c=>{
+    html+=`
+      <div class="chamado" onclick="toggle('${c.id}')" style="cursor:pointer">
+        <b>#${c.numero}</b> - ${c.descricao}<br>
+        <small>${c.unidade} | ${c.setor} | ${c.nome}</small>
+
+        <div id="d_${c.id}" class="final">
+          <b>Aberto por:</b> ${c.nome}<br>
+          <b>Unidade:</b> ${c.unidade}<br>
+          <b>Setor:</b> ${c.setor}<br><br>
+
+          <b>Atendido por:</b> ${c.atendido_por}<br><br>
+
+          <b>Solução:</b><br>${c.solucao}
+        </div>
+      </div>
+    `;
+  });
+
+  lista.innerHTML = html;
+}
+
+// DETALHE
+function toggle(id){
+  let el = document.getElementById("d_"+id);
+  el.style.display = el.style.display=="block"?"none":"block";
+}
+
+// BUSCAR
 function buscar(){
-  let c = dados.find(x=>x.numero==busca.value);
+  let n = busca.value;
+  let c = dados.find(x=>x.numero==n);
 
   if(!c) return alert("Não encontrado");
 
   lista.innerHTML = `
     <div class="chamado">
       <b>#${c.numero}</b><br>
-      ${c.descricao}<br>
-      ${c.status}
+      ${c.descricao}<br><br>
+      <b>Status:</b> ${c.status}<br>
+      <b>Atendido por:</b> ${c.atendido_por || "-"}<br>
+      <b>Solução:</b> ${c.solucao || "-"}
     </div>
   `;
 }
 
+// CRIAR USUÁRIO
 async function criarUsuario(){
-  let user = novo_user.value;
-  let pass = novo_pass.value;
+  let user = document.getElementById("novo_user").value;
+  let pass = document.getElementById("novo_pass").value;
 
   if(!user || !pass) return alert("Preencha");
 
-  await db.from("usuarios").insert([{ login:user, senha:pass }]);
+  let { error } = await db.from("usuarios").insert([
+    { login: user, senha: pass }
+  ]);
 
-  alert("Criado");
+  if(error){
+    console.error(error);
+    alert("Erro ao criar usuário");
+    return;
+  }
+
+  alert("Usuário criado com sucesso!");
 }
 
 load();

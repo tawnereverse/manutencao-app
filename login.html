@@ -38,8 +38,10 @@ button {
   color: white;
   border: none;
   border-radius: 6px;
+  cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
@@ -62,9 +64,10 @@ const db = supabase.createClient(
 );
 
 async function logar(){
-  let user = userInput = document.getElementById("user").value;
+  let user = document.getElementById("user").value;
   let pass = document.getElementById("pass").value;
 
+  // ADMIN FIXO
   if(user === "admin" && pass === "123"){
     localStorage.setItem("logado","sim");
     localStorage.setItem("usuario", user);
@@ -72,6 +75,7 @@ async function logar(){
     return;
   }
 
+  // LOGIN BANCO
   let { data } = await db
     .from("usuarios")
     .select("*")
