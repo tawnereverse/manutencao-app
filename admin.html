@@ -301,18 +301,24 @@ function buscar(){
   `;
 }
 
-// CRIAR USUÁRIO
+// ✅ CRIAR USUÁRIO (CORRIGIDO)
 async function criarUsuario(){
   let user = document.getElementById("novo_user").value;
   let pass = document.getElementById("novo_pass").value;
 
   if(!user || !pass) return alert("Preencha");
 
-  await db.from("usuarios").insert([
+  let { data, error } = await db.from("usuarios").insert([
     { usuario: user, senha: pass }
   ]);
 
-  alert("Usuário criado!");
+  if(error){
+    console.error(error);
+    alert("Erro ao criar usuário");
+    return;
+  }
+
+  alert("Usuário criado com sucesso!");
 }
 
 // INIT
