@@ -1,76 +1,35 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body {
-  font-family: Arial;
-  background: #1e3a8a;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
-
-.box {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 320px;
-  text-align: center;
-}
-
-.logo {
-  width: 140px;
-  margin-bottom: 10px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-}
-
-button {
-  width: 100%;
-  margin-top: 15px;
-  padding: 10px;
-  background: #2563eb;
-  color: white;
-  border: none;
-}
-
-.erro {
-  color: red;
-  margin-top: 10px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="box">
-  <img src="logo.png" class="logo">
-  <h2>Painel</h2>
-
-  <input id="user" placeholder="Usuário">
-  <input id="pass" type="password" placeholder="Senha">
-
-  <button onclick="login()">Entrar</button>
-  <div id="erro"></div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-function login() {
-  if (user.value === "admin" && pass.value === "123") {
-    localStorage.setItem("logado", "sim");
+const db = supabase.createClient(
+  "https://kmxmyjvxncteacojmbaj.supabase.co",
+  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
+);
+
+async function logar(){
+  let user = document.getElementById("user").value;
+  let pass = document.getElementById("pass").value;
+
+  // LOGIN FIXO (mantém admin funcionando)
+  if(user === "admin" && pass === "123"){
+    localStorage.setItem("logado","sim");
+    location.href = "admin.html";
+    return;
+  }
+
+  // LOGIN DINÂMICO
+  let { data } = await db
+    .from("usuarios")
+    .select("*")
+    .eq("usuario", user)
+    .eq("senha", pass)
+    .single();
+
+  if(data){
+    localStorage.setItem("logado","sim");
     location.href = "admin.html";
   } else {
-    erro.innerText = "Login inválido";
+    alert("Login inválido");
   }
 }
 </script>
-
-</body>
-</html>
