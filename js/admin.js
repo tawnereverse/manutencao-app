@@ -459,7 +459,12 @@ async function parseApiBody(response) {
 }
 
 async function requestChamados(method, payload) {
-  const endpoints = ["/api/chamados", "/api/tickets"];
+  const endpoints = [
+    "/api/chamados",
+    "/api/chamados.js",
+    "/api/tickets",
+    "/api/tickets.js"
+  ];
   let lastBody = { error: "Nenhum endpoint respondeu." };
   let lastResponse = null;
 
