@@ -1,15 +1,7 @@
 import {
-  getMyProfile,
-  getSession,
-  requireUser,
-  signOutAndRedirect
-} from "./auth.js";
-import { supabase } from "./supabaseClient.js";
-import {
   clearMessage,
   formatDate,
   friendlyRole,
-  isSupportRole,
   priorityLabel,
   sanitizeText,
   showMessage,
@@ -38,15 +30,13 @@ const newUserEmailInput = document.getElementById("new-user-email");
 const newUserPasswordInput = document.getElementById("new-user-password");
 const newUserRoleInput = document.getElementById("new-user-role");
 
-let currentUser = null;
-let currentProfile = null;
 const state = {
   tickets: [],
   filter: "todos",
   search: ""
 };
 
-logoutButton.addEventListener("click", () => signOutAndRedirect("./login.html"));
+logoutButton.addEventListener("click", onLogout);
 searchForm.addEventListener("submit", onSearch);
 clearSearchButton.addEventListener("click", onClearSearch);
 
@@ -57,54 +47,40 @@ for (const button of filterButtons) {
 init();
 
 async function init() {
-  try {
-    currentUser = await requireUser("./login.html");
-    if (!currentUser) {
-      return;
-    }
-
-    currentProfile = await getMyProfile(currentUser.id);
-    const role = currentProfile?.role ?? "solicitante";
-    if (!isSupportRole(role)) {
-      window.location.href = "./index.html";
-      return;
-    }
-
-    userNameElement.textContent =
-      currentProfile?.full_name ||
-      currentUser.user_metadata?.full_name ||
-      currentUser.email;
-    userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
-
-    if (role === "admin") {
-      adminUserCard.classList.remove("hidden");
-      createUserForm.addEventListener("submit", onCreateUser);
-    }
-
-    await loadTickets();
-  } catch (error) {
-    showMessage(feedback, `Erro ao carregar painel: ${error.message}`, "error");
+  if (localStorage.getItem("logado") !== "sim") {
+    window.location.href = "./login.html";
+    return;
   }
+
+  const user = localStorage.getItem("usuario") || "usuario";
+  const displayName = localStorage.getItem("displayName") || user;
+  const storedRole = localStorage.getItem("role");
+  const role = storedRole || (user === "admin" ? "admin" : "tecnico");
+
+  userNameElement.textContent = displayName;
+  userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
+
+  if (role === "admin") {
+    adminUserCard.classList.remove("hidden");
+    createUserForm.addEventListener("submit", onCreateUser);
+  }
+
+  await loadTickets();
 }
 
 async function loadTickets() {
   clearMessage(feedback);
   ticketsContainer.innerHTML = "";
 
-  const { data, error } = await supabase
-    .from("chamados")
-    .select(
-      "id, numero, created_at, status, prioridade, descricao, unidade, setor, solicitante_nome, solicitante_email, atendido_por, solucao"
-    )
-    .order("created_at", { ascending: false })
-    .limit(300);
+  const response = await fetch("/api/chamados");
+  const body = await safeJson(response);
 
-  if (error) {
-    showMessage(feedback, `Falha ao consultar chamados: ${error.message}`, "error");
+  if (!response.ok) {
+    showMessage(feedback, body?.error || "Falha ao consultar chamados.", "error");
     return;
   }
 
-  state.tickets = data;
+  state.tickets = body?.data || [];
   renderDashboard();
   renderTickets();
 }
@@ -166,7 +142,7 @@ function getFilteredTickets() {
 
   if (state.search) {
     output = output.filter((ticket) => {
-      const searchable = `${ticket.numero} ${ticket.descricao} ${ticket.solicitante_nome} ${ticket.solicitante_email || ""}`
+      const searchable = `${ticket.numero} ${ticket.descricao} ${ticket.solicitante_nome || ""} ${ticket.solicitante_email || ""}`
         .toLowerCase()
         .trim();
       return searchable.includes(state.search);
@@ -185,26 +161,26 @@ function createTicketCard(ticket) {
 
   const number = document.createElement("p");
   number.className = "ticket-number";
-  number.textContent = `#${ticket.numero}`;
+  number.textContent = `#${ticket.numero ?? ticket.id ?? "-"}`;
 
   const status = document.createElement("span");
-  status.className = statusChipClass(ticket.status);
-  status.textContent = statusLabel(ticket.status);
+  status.className = statusChipClass(ticket.status || "aberto");
+  status.textContent = statusLabel(ticket.status || "aberto");
 
   head.append(number, status);
 
   const description = document.createElement("p");
   description.className = "ticket-description";
-  description.textContent = ticket.descricao;
+  description.textContent = ticket.descricao || "-";
 
   const meta = document.createElement("div");
   meta.className = "ticket-meta";
   meta.append(
-    metaItem(`Solicitante: ${ticket.solicitante_nome}`),
+    metaItem(`Solicitante: ${ticket.solicitante_nome || ticket.nome || "-"}`),
     metaItem(`Email: ${ticket.solicitante_email || "-"}`),
-    metaItem(`Unidade: ${ticket.unidade}`),
-    metaItem(`Setor: ${ticket.setor}`),
-    metaItem(`Prioridade: ${priorityLabel(ticket.prioridade)}`),
+    metaItem(`Unidade: ${ticket.unidade || "-"}`),
+    metaItem(`Setor: ${ticket.setor || "-"}`),
+    metaItem(`Prioridade: ${priorityLabel(ticket.prioridade || "normal")}`),
     metaItem(`Abertura: ${formatDate(ticket.created_at)}`)
   );
 
@@ -220,7 +196,7 @@ function createTicketCard(ticket) {
     createOption("andamento", "Em andamento"),
     createOption("finalizado", "Finalizado")
   );
-  statusSelect.value = ticket.status;
+  statusSelect.value = ticket.status || "aberto";
 
   const saveStatusButton = document.createElement("button");
   saveStatusButton.type = "button";
@@ -260,10 +236,9 @@ function createTicketCard(ticket) {
   finalizeBox.append(attendedField, solutionField, finalizeButton);
   actions.appendChild(finalizeBox);
 
-  if (ticket.status === "finalizado") {
+  if (statusSelect.value === "finalizado") {
     finalizeBox.classList.remove("hidden");
-    const notifyBox = createNotifyBox(ticket);
-    actions.appendChild(notifyBox);
+    actions.appendChild(createNotifyBox(ticket));
   }
 
   saveStatusButton.addEventListener("click", async () => {
@@ -316,7 +291,6 @@ function createNotifyBox(ticket) {
   emailLink.rel = "noopener noreferrer";
   emailLink.textContent = "Abrir email";
   emailLink.href = buildMailto(ticket);
-  emailLink.setAttribute("aria-label", "Abrir app de email");
 
   const whatsappLink = document.createElement("a");
   whatsappLink.className = "as-button btn-secondary";
@@ -324,7 +298,6 @@ function createNotifyBox(ticket) {
   whatsappLink.rel = "noopener noreferrer";
   whatsappLink.textContent = "Compartilhar no WhatsApp";
   whatsappLink.href = buildWhatsAppShare(ticket);
-  whatsappLink.setAttribute("aria-label", "Compartilhar no WhatsApp");
 
   const downloadButton = document.createElement("button");
   downloadButton.type = "button";
@@ -349,15 +322,14 @@ function buildMailto(ticket) {
 
 function buildWhatsAppShare(ticket) {
   const text = buildTicketSummaryLines(ticket).join("\n");
-
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
 function buildTicketSummaryLines(ticket) {
   return [
-    `Ola ${ticket.solicitante_nome || ""},`,
+    `Ola ${ticket.solicitante_nome || ticket.nome || ""},`,
     "",
-    `Seu chamado #${ticket.numero} foi finalizado.`,
+    `Seu chamado #${ticket.numero || "-"} foi finalizado.`,
     `Email do solicitante: ${ticket.solicitante_email || "-"}`,
     `Descricao: ${ticket.descricao || "-"}`,
     `Solucao: ${ticket.solucao || "-"}`,
@@ -370,7 +342,7 @@ function buildTicketSummaryLines(ticket) {
 function downloadTicketSummary(ticket) {
   const content = buildTicketSummaryLines(ticket).join("\n");
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const fileName = `chamado-${ticket.numero}.txt`;
+  const fileName = `chamado-${ticket.numero || "sem-numero"}.txt`;
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -383,11 +355,18 @@ function downloadTicketSummary(ticket) {
 
 async function updateTicket(id, payload) {
   clearMessage(feedback);
-  const { error } = await supabase.from("chamados").update(payload).eq("id", id);
-  if (error) {
-    showMessage(feedback, `Falha ao atualizar chamado: ${error.message}`, "error");
+  const response = await fetch("/api/chamados", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...payload })
+  });
+  const body = await safeJson(response);
+
+  if (!response.ok) {
+    showMessage(feedback, body?.error || "Falha ao atualizar chamado.", "error");
     return;
   }
+
   showMessage(feedback, "Chamado atualizado com sucesso.", "success");
   await loadTickets();
 }
@@ -430,17 +409,12 @@ async function onCreateUser(event) {
   clearMessage(createUserFeedback);
 
   const fullName = sanitizeText(newUserNameInput.value);
-  const email = sanitizeText(newUserEmailInput.value).toLowerCase();
+  const login = sanitizeText(newUserEmailInput.value).toLowerCase();
   const password = newUserPasswordInput.value;
   const role = newUserRoleInput.value;
 
-  if (!fullName || !email || !password || !role) {
+  if (!fullName || !login || !password || !role) {
     showMessage(createUserFeedback, "Preencha todos os campos.", "error");
-    return;
-  }
-
-  if (password.length < 8) {
-    showMessage(createUserFeedback, "A senha deve ter no minimo 8 caracteres.", "error");
     return;
   }
 
@@ -448,28 +422,15 @@ async function onCreateUser(event) {
   createUserButton.textContent = "Criando...";
 
   try {
-    const session = await getSession();
-    if (!session) {
-      throw new Error("Sessao invalida. Faca login novamente.");
-    }
-
     const response = await fetch("/api/create-user", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        fullName,
-        email,
-        password,
-        role
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName, login, password, role })
     });
 
     const body = await safeJson(response);
     if (!response.ok) {
-      throw new Error(body?.error ?? "Erro ao criar usuario.");
+      throw new Error(body?.error || "Erro ao criar usuario.");
     }
 
     showMessage(createUserFeedback, "Usuario criado com sucesso.", "success");
@@ -480,6 +441,14 @@ async function onCreateUser(event) {
     createUserButton.disabled = false;
     createUserButton.textContent = "Criar usuario";
   }
+}
+
+function onLogout() {
+  localStorage.removeItem("logado");
+  localStorage.removeItem("usuario");
+  localStorage.removeItem("role");
+  localStorage.removeItem("displayName");
+  window.location.href = "./login.html";
 }
 
 async function safeJson(response) {

@@ -1,36 +1,26 @@
-import { getMyProfile } from "./auth.js";
-import { supabase } from "./supabaseClient.js";
 import { clearMessage, showMessage } from "./ui.js";
 
 const form = document.getElementById("login-form");
 const loginButton = document.getElementById("login-btn");
 const feedback = document.getElementById("login-feedback");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
+const userInput = document.getElementById("user");
+const passInput = document.getElementById("pass");
 
-init();
-form.addEventListener("submit", onSubmit);
-
-async function init() {
-  try {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      await redirectByRole(data.user.id);
-    }
-  } catch (error) {
-    showMessage(feedback, `Erro ao validar sessao: ${error.message}`, "error");
-  }
+if (localStorage.getItem("logado") === "sim") {
+  window.location.href = "./admin.html";
 }
+
+form.addEventListener("submit", onSubmit);
 
 async function onSubmit(event) {
   event.preventDefault();
   clearMessage(feedback);
 
-  const email = emailInput.value.trim().toLowerCase();
-  const password = passwordInput.value;
+  const user = String(userInput.value || "").trim();
+  const pass = String(passInput.value || "");
 
-  if (!email || !password) {
-    showMessage(feedback, "Preencha e-mail e senha.", "error");
+  if (!user || !pass) {
+    showMessage(feedback, "Informe usuario e senha.", "error");
     return;
   }
 
@@ -38,20 +28,23 @@ async function onSubmit(event) {
   loginButton.textContent = "Entrando...";
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user, pass })
     });
 
-    if (error) {
-      throw error;
+    const body = await safeJson(response);
+    if (!response.ok || !body?.ok) {
+      throw new Error(body?.error || "Login invalido.");
     }
 
-    if (!data.user) {
-      throw new Error("Nao foi possivel obter os dados do usuario.");
-    }
+    localStorage.setItem("logado", "sim");
+    localStorage.setItem("usuario", body.user || user);
+    localStorage.setItem("role", body.role || "tecnico");
+    localStorage.setItem("displayName", body.displayName || user);
 
-    await redirectByRole(data.user.id);
+    window.location.href = "./admin.html";
   } catch (error) {
     showMessage(feedback, error.message, "error");
   } finally {
@@ -60,11 +53,10 @@ async function onSubmit(event) {
   }
 }
 
-async function redirectByRole(userId) {
-  const profile = await getMyProfile(userId);
-  if (profile?.role === "admin" || profile?.role === "tecnico") {
-    window.location.href = "./admin.html";
-    return;
+async function safeJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
   }
-  window.location.href = "./index.html";
 }
