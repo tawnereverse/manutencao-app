@@ -19,6 +19,9 @@ No projeto do Vercel, configure:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Observacao:
+- O frontend le `SUPABASE_URL` e `SUPABASE_ANON_KEY` via endpoint [`/api/public-config.js`](./api/public-config.js).
+
 ## 3) Estrutura principal
 
 - [`login.html`](./login.html): login com email/senha do Supabase Auth
