@@ -1,102 +1,76 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="pt-BR">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body {
-  font-family: Arial;
-  background: #1e3a8a;
-  margin: 0;
-  text-align: center;
-}
-
-.container {
-  max-width: 500px;
-  margin: 20px auto;
-  background: white;
-  color: #1e3a8a;
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.logo {
-  width: 120px;
-  margin-bottom: 10px;
-}
-
-input, select, textarea, button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-button {
-  background: #2563eb;
-  color: white;
-  border: none;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abertura de Chamado | Atlantica</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
+<body class="app-page">
+  <header class="top-header">
+    <img src="./logo.png" class="brand-logo" alt="Logo Atlantica">
+    <div class="header-user">
+      <p id="user-name" class="user-name">Carregando...</p>
+      <p id="user-role" class="user-role"></p>
+    </div>
+    <div class="header-actions">
+      <button id="go-panel" class="btn-secondary hidden" type="button">Abrir painel</button>
+      <button id="logout-btn" class="btn-danger" type="button">Sair</button>
+    </div>
+  </header>
 
-<body>
+  <main class="page-grid single-column">
+    <section class="card">
+      <h1>Abertura de Chamado</h1>
+      <p class="muted">Preencha os campos para registrar o atendimento.</p>
 
-<div class="container">
-  <img src="logo.png" class="logo">
+      <form id="ticket-form" class="stack-form">
+        <label class="field">
+          <span>Nome</span>
+          <input id="nome" maxlength="80" required placeholder="Seu nome">
+        </label>
 
-  <h2>Abertura de Chamado</h2>
+        <label class="field">
+          <span>Email</span>
+          <input id="email" type="email" maxlength="254" required placeholder="voce@empresa.com">
+        </label>
 
-  <input id="nome" placeholder="Seu nome">
+        <label class="field">
+          <span>Unidade</span>
+          <select id="unidade" required>
+            <option value="">Selecione</option>
+            <option value="Atlantica Matriz">Atlantica Matriz</option>
+            <option value="CD Kasa Granitos">CD Kasa Granitos</option>
+            <option value="Max Vidros">Max Vidros</option>
+            <option value="Perfilmaster">Perfilmaster</option>
+            <option value="Uvolt Solar">Uvolt Solar</option>
+          </select>
+        </label>
 
-  <select id="unidade">
-    <option value="">Selecione a unidade</option>
-    <option>Atlântica Matriz</option>
-    <option>CD Kasa Granitos</option>
-    <option>Max Vidros</option>
-    <option>Perfilmaster</option>
-    <option>Uvolt Solar</option>
-  </select>
+        <label class="field">
+          <span>Setor</span>
+          <input id="setor" maxlength="80" required placeholder="Ex.: Financeiro">
+        </label>
 
-  <input id="setor" placeholder="Setor">
+        <label class="field">
+          <span>Descricao do problema</span>
+          <textarea id="descricao" maxlength="500" required placeholder="Descreva o problema com detalhes"></textarea>
+        </label>
 
-  <textarea id="descricao" maxlength="200" placeholder="Descreva o problema"></textarea>
+        <label class="field">
+          <span>Prioridade</span>
+          <select id="prioridade" required>
+            <option value="normal">Normal</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </label>
 
-  <select id="prioridade">
-    <option>Normal</option>
-    <option>Urgente</option>
-  </select>
+        <button id="submit-ticket-btn" type="submit">Enviar chamado</button>
+      </form>
+      <p id="ticket-feedback" class="message hidden" role="status" aria-live="polite"></p>
+    </section>
+  </main>
 
-  <button onclick="enviar()">Enviar</button>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-<script>
-const supabaseClient = supabase.createClient(
-  "https://kmxmyjvxncteacojmbaj.supabase.co",
-  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
-);
-
-async function enviar() {
-  await supabaseClient.from("chamados").insert([{
-    nome: nome.value,
-    unidade: unidade.value,
-    setor: setor.value,
-    descricao: descricao.value,
-    prioridade: prioridade.value,
-    status: "Aberto"
-  }]);
-
-  alert("Chamado enviado!");
-}
-</script>
-
-<div class="footer">
-  Desenvolvido por Leonardo Gouveia
-</div>
-
+  <script type="module" src="./js/index.js"></script>
 </body>
 </html>

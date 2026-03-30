@@ -1,97 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body {
-  font-family: Arial;
-  background: #1e3a8a;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
-
-.box {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 300px;
-  text-align: center;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 15px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login | Atlantica</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
+<body class="auth-page">
+  <main class="auth-card">
+    <img src="./logo.png" class="brand-logo" alt="Logo Atlantica">
+    <h1>Login</h1>
+    <p class="muted">Acesse com seu e-mail e senha cadastrados no Supabase Auth.</p>
 
-<body>
+    <form id="login-form" class="stack-form">
+      <label class="field">
+        <span>E-mail</span>
+        <input id="email" type="email" required autocomplete="email" placeholder="voce@empresa.com">
+      </label>
 
-<div class="box">
-  <h2>Login</h2>
+      <label class="field">
+        <span>Senha</span>
+        <input id="password" type="password" required autocomplete="current-password" placeholder="********">
+      </label>
 
-  <input id="user" placeholder="Usuário">
-  <input id="pass" type="password" placeholder="Senha">
+      <button id="login-btn" type="submit">Entrar</button>
+    </form>
+    <p id="login-feedback" class="message hidden" role="status" aria-live="polite"></p>
+  </main>
 
-  <button onclick="logar()">Entrar</button>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-<script>
-const db = supabase.createClient(
-  "https://kmxmyjvxncteacojmbaj.supabase.co",
-  "sb_publishable_OuujR_q1W9R1q9-MJuHPIg_a89r7Y9J"
-);
-
-async function logar(){
-  let user = document.getElementById("user").value;
-  let pass = document.getElementById("pass").value;
-
-  // ADMIN FIXO
-  if(user === "admin" && pass === "123"){
-    localStorage.setItem("logado","sim");
-    localStorage.setItem("usuario", user);
-    location.href = "admin.html";
-    return;
-  }
-
-  // LOGIN BANCO
-  let { data } = await db
-    .from("usuarios")
-    .select("*")
-    .eq("login", user)
-    .eq("senha", pass)
-    .single();
-
-  if(data){
-    localStorage.setItem("logado","sim");
-    localStorage.setItem("usuario", user);
-    location.href = "admin.html";
-  } else {
-    alert("Login inválido");
-  }
-}
-</script>
-
+  <script type="module" src="./js/login.js"></script>
 </body>
 </html>
