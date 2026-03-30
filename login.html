@@ -10,17 +10,17 @@
   <main class="auth-card">
     <img src="./logo.png" class="brand-logo" alt="Logo Atlantica">
     <h1>Login</h1>
-    <p class="muted">Acesse com seu e-mail e senha cadastrados no Supabase Auth.</p>
+    <p class="muted">Acesse com usuario e senha. Admin padrao: admin / 123.</p>
 
     <form id="login-form" class="stack-form">
       <label class="field">
-        <span>E-mail</span>
-        <input id="email" type="email" required autocomplete="email" placeholder="voce@empresa.com">
+        <span>Usuario</span>
+        <input id="user" required autocomplete="username" placeholder="Seu usuario">
       </label>
 
       <label class="field">
         <span>Senha</span>
-        <input id="password" type="password" required autocomplete="current-password" placeholder="********">
+        <input id="pass" type="password" required autocomplete="current-password" placeholder="********">
       </label>
 
       <button id="login-btn" type="submit">Entrar</button>
@@ -28,8 +28,6 @@
     <p id="login-feedback" class="message hidden" role="status" aria-live="polite"></p>
   </main>
 
-  <script src="/api/public-config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module" src="./js/login.js"></script>
 </body>
 </html>
