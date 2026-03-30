@@ -72,10 +72,9 @@ async function loadTickets() {
   clearMessage(feedback);
   ticketsContainer.innerHTML = "";
 
-  const response = await fetch("/api/chamados");
-  const body = await parseApiBody(response);
+  const { response, body } = await requestChamados("GET");
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     showMessage(feedback, body.error || body.raw || "Falha ao consultar chamados.", "error");
     return;
   }
@@ -355,14 +354,9 @@ function downloadTicketSummary(ticket) {
 
 async function updateTicket(id, payload) {
   clearMessage(feedback);
-  const response = await fetch("/api/chamados", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, ...payload })
-  });
-  const body = await parseApiBody(response);
+  const { response, body } = await requestChamados("PATCH", { id, ...payload });
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     showMessage(feedback, body.error || body.raw || "Falha ao atualizar chamado.", "error");
     return;
   }
@@ -462,4 +456,31 @@ async function parseApiBody(response) {
   } catch {
     return { raw: text.slice(0, 240) };
   }
+}
+
+async function requestChamados(method, payload) {
+  const endpoints = ["/api/chamados", "/api/tickets"];
+  let lastBody = { error: "Nenhum endpoint respondeu." };
+  let lastResponse = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: payload ? JSON.stringify(payload) : undefined
+      });
+      const body = await parseApiBody(response);
+      if (response.ok || response.status !== 404) {
+        return { response, body };
+      }
+      lastBody = body;
+      lastResponse = response;
+    } catch (error) {
+      lastBody = { error: error.message || "Falha de rede." };
+      lastResponse = null;
+    }
+  }
+
+  return { response: lastResponse, body: lastBody };
 }
