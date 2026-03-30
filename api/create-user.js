@@ -1,5 +1,3 @@
-const ALLOWED_ROLES = new Set(["solicitante", "tecnico", "admin"]);
-
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -7,148 +5,65 @@ module.exports = async (req, res) => {
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+  if (!supabaseUrl || !serviceRole) {
     return res.status(500).json({
-      error:
-        "Variaveis de ambiente ausentes. Configure SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY."
+      error: "Variaveis de ambiente ausentes. Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY."
     });
   }
 
   try {
-    const accessToken = readBearer(req.headers.authorization);
-    if (!accessToken) {
-      return res.status(401).json({ error: "Token de autenticacao ausente." });
-    }
-
-    const requester = await getRequesterUser(supabaseUrl, supabaseAnonKey, accessToken);
-    if (!requester?.id) {
-      return res.status(401).json({ error: "Token invalido." });
-    }
-
-    const requesterRole = await getRequesterRole(
-      supabaseUrl,
-      supabaseServiceRoleKey,
-      requester.id
-    );
-    if (requesterRole !== "admin") {
-      return res.status(403).json({ error: "Apenas administradores podem criar usuarios." });
-    }
-
     const body = await parseBody(req);
-    const fullName = clean(body.fullName);
-    const email = clean(body.email).toLowerCase();
-    const password = String(body.password ?? "");
-    const role = clean(body.role);
+    const login = clean(body.login);
+    const senha = String(body.password ?? "").trim();
+    const nome = clean(body.fullName);
+    const role = clean(body.role) || "tecnico";
 
-    if (!fullName || !email || !password || !role) {
-      return res.status(400).json({ error: "Parametros obrigatorios nao informados." });
+    if (!login || !senha) {
+      return res.status(400).json({ error: "Login e senha sao obrigatorios." });
     }
 
-    if (!ALLOWED_ROLES.has(role)) {
-      return res.status(400).json({ error: "Perfil invalido." });
+    const primaryPayload = { login, senha, nome, role };
+    let response = await insertUsuario(supabaseUrl, serviceRole, primaryPayload);
+
+    if (!response.ok) {
+      const errorBody = await safeJson(response);
+      const details = String(errorBody?.message || errorBody?.error || "");
+      const unknownColumn = details.toLowerCase().includes("column");
+      if (unknownColumn) {
+        response = await insertUsuario(supabaseUrl, serviceRole, { login, senha });
+      } else {
+        return res.status(response.status).json({
+          error: errorBody?.message || errorBody?.error || "Falha ao criar usuario."
+        });
+      }
     }
 
-    if (password.length < 8) {
-      return res.status(400).json({ error: "A senha deve ter no minimo 8 caracteres." });
+    if (!response.ok) {
+      const errorBody = await safeJson(response);
+      return res.status(response.status).json({
+        error: errorBody?.message || errorBody?.error || "Falha ao criar usuario."
+      });
     }
 
-    const createUserResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseServiceRoleKey,
-        Authorization: `Bearer ${supabaseServiceRoleKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName }
-      })
-    });
-
-    const createUserBody = await safeJson(createUserResponse);
-    if (!createUserResponse.ok) {
-      const message =
-        createUserBody?.msg ||
-        createUserBody?.error_description ||
-        createUserBody?.error ||
-        "Falha ao criar usuario no Supabase Auth.";
-      return res.status(createUserResponse.status).json({ error: message });
-    }
-
-    const createdUserId = createUserBody?.id || createUserBody?.user?.id;
-    if (!createdUserId) {
-      return res.status(500).json({ error: "Usuario criado sem ID retornado." });
-    }
-
-    const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseServiceRoleKey,
-        Authorization: `Bearer ${supabaseServiceRoleKey}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=minimal"
-      },
-      body: JSON.stringify({
-        id: createdUserId,
-        full_name: fullName,
-        role
-      })
-    });
-
-    if (!profileResponse.ok) {
-      const profileBody = await safeJson(profileResponse);
-      const message = profileBody?.message || profileBody?.error || "Falha ao salvar profile.";
-      return res.status(500).json({ error: message });
-    }
-
-    return res.status(201).json({ message: "Usuario criado com sucesso." });
+    return res.status(201).json({ ok: true, message: "Usuario criado com sucesso." });
   } catch (error) {
     return res.status(500).json({ error: error.message || "Erro interno." });
   }
 };
 
-function readBearer(authorizationHeader = "") {
-  if (!authorizationHeader.startsWith("Bearer ")) {
-    return null;
-  }
-  return authorizationHeader.slice("Bearer ".length).trim() || null;
-}
-
-async function getRequesterUser(supabaseUrl, supabaseAnonKey, accessToken) {
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+function insertUsuario(supabaseUrl, serviceRole, payload) {
+  return fetch(`${supabaseUrl}/rest/v1/usuarios`, {
+    method: "POST",
     headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${accessToken}`
-    }
+      apikey: serviceRole,
+      Authorization: `Bearer ${serviceRole}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(payload)
   });
-  if (!response.ok) {
-    return null;
-  }
-  return safeJson(response);
-}
-
-async function getRequesterRole(supabaseUrl, serviceRoleKey, userId) {
-  const profileUrl = `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(
-    userId
-  )}&select=role`;
-  const response = await fetch(profileUrl, {
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`
-    }
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const data = await safeJson(response);
-  return data?.[0]?.role ?? null;
 }
 
 async function parseBody(req) {
