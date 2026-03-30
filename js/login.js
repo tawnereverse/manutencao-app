@@ -34,9 +34,9 @@ async function onSubmit(event) {
       body: JSON.stringify({ user, pass })
     });
 
-    const body = await safeJson(response);
+    const body = await parseApiBody(response);
     if (!response.ok || !body?.ok) {
-      throw new Error(body?.error || "Login invalido.");
+      throw new Error(body.error || body.raw || "Login invalido.");
     }
 
     localStorage.setItem("logado", "sim");
@@ -53,10 +53,15 @@ async function onSubmit(event) {
   }
 }
 
-async function safeJson(response) {
+async function parseApiBody(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
   try {
-    return await response.json();
+    return JSON.parse(text);
   } catch {
-    return null;
+    return { raw: text.slice(0, 240) };
   }
 }

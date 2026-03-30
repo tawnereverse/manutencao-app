@@ -48,9 +48,9 @@ async function onSubmitTicket(event) {
       body: JSON.stringify(payload)
     });
 
-    const body = await safeJson(response);
+    const body = await parseApiBody(response);
     if (!response.ok) {
-      throw new Error(body?.error || "Falha ao abrir chamado.");
+      throw new Error(body.error || body.raw || "Falha ao abrir chamado.");
     }
 
     showMessage(
@@ -67,10 +67,15 @@ async function onSubmitTicket(event) {
   }
 }
 
-async function safeJson(response) {
+async function parseApiBody(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
   try {
-    return await response.json();
+    return JSON.parse(text);
   } catch {
-    return null;
+    return { raw: text.slice(0, 240) };
   }
 }

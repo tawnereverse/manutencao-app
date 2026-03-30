@@ -73,10 +73,10 @@ async function loadTickets() {
   ticketsContainer.innerHTML = "";
 
   const response = await fetch("/api/chamados");
-  const body = await safeJson(response);
+  const body = await parseApiBody(response);
 
   if (!response.ok) {
-    showMessage(feedback, body?.error || "Falha ao consultar chamados.", "error");
+    showMessage(feedback, body.error || body.raw || "Falha ao consultar chamados.", "error");
     return;
   }
 
@@ -360,10 +360,10 @@ async function updateTicket(id, payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, ...payload })
   });
-  const body = await safeJson(response);
+  const body = await parseApiBody(response);
 
   if (!response.ok) {
-    showMessage(feedback, body?.error || "Falha ao atualizar chamado.", "error");
+    showMessage(feedback, body.error || body.raw || "Falha ao atualizar chamado.", "error");
     return;
   }
 
@@ -428,9 +428,9 @@ async function onCreateUser(event) {
       body: JSON.stringify({ fullName, login, password, role })
     });
 
-    const body = await safeJson(response);
+    const body = await parseApiBody(response);
     if (!response.ok) {
-      throw new Error(body?.error || "Erro ao criar usuario.");
+      throw new Error(body.error || body.raw || "Erro ao criar usuario.");
     }
 
     showMessage(createUserFeedback, "Usuario criado com sucesso.", "success");
@@ -451,10 +451,15 @@ function onLogout() {
   window.location.href = "./login.html";
 }
 
-async function safeJson(response) {
+async function parseApiBody(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
   try {
-    return await response.json();
+    return JSON.parse(text);
   } catch {
-    return null;
+    return { raw: text.slice(0, 240) };
   }
 }
