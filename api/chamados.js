@@ -51,7 +51,7 @@ async function listChamados(_req, res, supabaseUrl, serviceRole) {
 
   if (!response.ok) {
     return res.status(response.status).json({
-      error: body?.message || body?.error || "Falha ao consultar chamados."
+      error: extractError(body, "Falha ao consultar chamados.")
     });
   }
 
@@ -87,13 +87,18 @@ async function createChamado(req, res, supabaseUrl, serviceRole) {
 
   if (!response.ok && requiresUserId(body)) {
     const fallbackUserId = await getFallbackUserId(supabaseUrl, serviceRole);
-    if (fallbackUserId) {
-      response = await restInsert(supabaseUrl, serviceRole, "chamados", {
-        ...insertPayload,
-        user_id: fallbackUserId
+    if (!fallbackUserId) {
+      return res.status(400).json({
+        error:
+          "Banco exige user_id obrigatorio no chamado. No Supabase SQL Editor execute: alter table public.chamados alter column user_id drop not null;"
       });
-      body = await safeJson(response);
     }
+
+    response = await restInsert(supabaseUrl, serviceRole, "chamados", {
+      ...insertPayload,
+      user_id: fallbackUserId
+    });
+    body = await safeJson(response);
   }
 
   if (!response.ok && isUnknownColumn(body)) {
@@ -111,7 +116,7 @@ async function createChamado(req, res, supabaseUrl, serviceRole) {
 
   if (!response.ok) {
     return res.status(response.status).json({
-      error: body?.message || body?.error || "Falha ao abrir chamado."
+      error: extractError(body, "Falha ao abrir chamado.")
     });
   }
 
@@ -172,7 +177,7 @@ async function updateChamado(req, res, supabaseUrl, serviceRole) {
 
   if (!response.ok) {
     return res.status(response.status).json({
-      error: body?.message || body?.error || "Falha ao atualizar chamado."
+      error: extractError(body, "Falha ao atualizar chamado.")
     });
   }
 
@@ -203,7 +208,11 @@ function requiresUserId(errorBody) {
   const details = String(
     errorBody?.message || errorBody?.details || errorBody?.error || ""
   ).toLowerCase();
-  return details.includes("user_id") && (details.includes("null") || details.includes("required"));
+  const code = String(errorBody?.code || "");
+  return (
+    details.includes("user_id") &&
+    (details.includes("null") || details.includes("required") || code === "23502")
+  );
 }
 
 function normalizeChamado(row) {
@@ -272,5 +281,41 @@ async function getFallbackUserId(supabaseUrl, serviceRole) {
   }
 
   const data = await safeJson(response);
-  return Array.isArray(data) && data[0]?.id ? data[0].id : null;
+  if (Array.isArray(data) && data[0]?.id) {
+    return data[0].id;
+  }
+
+  const authUsersResponse = await fetch(
+    `${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1`,
+    {
+      headers: {
+        apikey: serviceRole,
+        Authorization: `Bearer ${serviceRole}`
+      }
+    }
+  );
+
+  if (!authUsersResponse.ok) {
+    return null;
+  }
+
+  const authUsersBody = await safeJson(authUsersResponse);
+  return Array.isArray(authUsersBody?.users) && authUsersBody.users[0]?.id
+    ? authUsersBody.users[0].id
+    : null;
+}
+
+function extractError(body, fallback) {
+  if (!body || typeof body !== "object") {
+    return fallback;
+  }
+
+  return (
+    body.message ||
+    body.details ||
+    body.hint ||
+    body.error_description ||
+    body.error ||
+    fallback
+  );
 }
