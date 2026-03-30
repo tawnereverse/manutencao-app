@@ -1,5 +1,5 @@
 module.exports = async (req, res) => {
-  const method = req.method || "GET";
+  const method = String(req.method || "GET").toUpperCase();
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

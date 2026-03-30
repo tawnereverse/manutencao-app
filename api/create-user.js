@@ -1,5 +1,6 @@
 module.exports = async (req, res) => {
-  if (req.method !== "POST") {
+  const method = String(req.method || "GET").toUpperCase();
+  if (method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Metodo nao permitido." });
   }
