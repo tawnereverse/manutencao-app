@@ -1,8 +1,8 @@
 diff --git a/api/login.js b/api/login.js
-index aeb6a04841b7078aee58c1d881ac72d2dcfd7732..8b93e351d97c2f1285f11b851920063a33e11833 100644
+index aeb6a04841b7078aee58c1d881ac72d2dcfd7732..703e0126851c87c5ac3b2d9d3ee7b19b3a1f5864 100644
 --- a/api/login.js
 +++ b/api/login.js
-@@ -1,38 +1,41 @@
+@@ -1,91 +1,110 @@
 +const { resolveSupabaseServerEnv, formatMissingServerEnvError } = require("./_supabaseEnv.js");
 +
  module.exports = async (req, res) => {
@@ -48,4 +48,74 @@ index aeb6a04841b7078aee58c1d881ac72d2dcfd7732..8b93e351d97c2f1285f11b851920063a
        `${supabaseUrl}/rest/v1/usuarios` +
        `?select=login,senha,nome,role` +
        `&login=eq.${encodeURIComponent(user)}` +
+       `&senha=eq.${encodeURIComponent(pass)}` +
+       `&limit=1`;
+ 
+-    const response = await fetch(url, {
++    const response = await supabaseFetch(url, {
+       headers: {
+         apikey: serviceRole,
+         Authorization: `Bearer ${serviceRole}`
+       }
+     });
+ 
+     const data = await safeJson(response);
+     if (!response.ok) {
+       const message = data?.message || data?.error || "Falha ao validar login.";
+       return res.status(response.status).json({ error: message });
+     }
+ 
+     const account = Array.isArray(data) ? data[0] : null;
+     if (!account) {
+       return res.status(401).json({ error: "Login invalido." });
+     }
+ 
+     return res.status(200).json({
+       ok: true,
+       user: account.login || user,
+       role: account.role || "tecnico",
+       displayName: account.nome || account.login || user
+     });
+   } catch (error) {
+     return res.status(500).json({ error: error.message || "Erro interno." });
+   }
+ };
+ 
+ async function parseBody(req) {
+   if (typeof req.body === "object" && req.body !== null) {
+     return req.body;
+   }
+   if (typeof req.body === "string" && req.body.trim()) {
+     return JSON.parse(req.body);
+   }
+   return {};
+ }
+ 
+ async function safeJson(response) {
+   try {
+     return await response.json();
+   } catch {
+     return null;
+   }
+ }
+ 
+ function clean(value) {
+   return String(value ?? "").trim();
+ }
++
++async function supabaseFetch(url, options) {
++  const controller = new AbortController();
++  const timer = setTimeout(() => controller.abort(), 8000);
++
++  try {
++    return await fetch(url, { ...options, signal: controller.signal });
++  } catch (error) {
++    if (error?.name === "AbortError") {
++      throw new Error("Tempo limite ao validar login no Supabase.");
++    }
++    throw error;
++  } finally {
++    clearTimeout(timer);
++  }
++}
 

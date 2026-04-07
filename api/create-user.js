@@ -1,8 +1,8 @@
 diff --git a/api/create-user.js b/api/create-user.js
-index bb4ccbaaf6f8a5f9fb97025183aff27cd116dc00..06b4d23b9be91b8c57365d2c191edd27fe2ed711 100644
+index bb4ccbaaf6f8a5f9fb97025183aff27cd116dc00..af9d2a3049d514ba49cc73b9a60a79741c8ceb37 100644
 --- a/api/create-user.js
 +++ b/api/create-user.js
-@@ -1,38 +1,41 @@
+@@ -1,90 +1,109 @@
 +const { resolveSupabaseServerEnv, formatMissingServerEnvError } = require("./_supabaseEnv.js");
 +
  module.exports = async (req, res) => {
@@ -48,4 +48,73 @@ index bb4ccbaaf6f8a5f9fb97025183aff27cd116dc00..06b4d23b9be91b8c57365d2c191edd27
          response = await insertUsuario(supabaseUrl, serviceRole, { login, senha });
        } else {
          return res.status(response.status).json({
+           error: errorBody?.message || errorBody?.error || "Falha ao criar usuario."
+         });
+       }
+     }
+ 
+     if (!response.ok) {
+       const errorBody = await safeJson(response);
+       return res.status(response.status).json({
+         error: errorBody?.message || errorBody?.error || "Falha ao criar usuario."
+       });
+     }
+ 
+     return res.status(201).json({ ok: true, message: "Usuario criado com sucesso." });
+   } catch (error) {
+     return res.status(500).json({ error: error.message || "Erro interno." });
+   }
+ };
+ 
+ function insertUsuario(supabaseUrl, serviceRole, payload) {
+-  return fetch(`${supabaseUrl}/rest/v1/usuarios`, {
++  return supabaseFetch(`${supabaseUrl}/rest/v1/usuarios`, {
+     method: "POST",
+     headers: {
+       apikey: serviceRole,
+       Authorization: `Bearer ${serviceRole}`,
+       "Content-Type": "application/json",
+       Prefer: "return=representation"
+     },
+     body: JSON.stringify(payload)
+   });
+ }
+ 
+ async function parseBody(req) {
+   if (typeof req.body === "object" && req.body !== null) {
+     return req.body;
+   }
+   if (typeof req.body === "string" && req.body.trim()) {
+     return JSON.parse(req.body);
+   }
+   return {};
+ }
+ 
+ async function safeJson(response) {
+   try {
+     return await response.json();
+   } catch {
+     return null;
+   }
+ }
+ 
+ function clean(value) {
+   return String(value ?? "").trim();
+ }
++
++async function supabaseFetch(url, options) {
++  const controller = new AbortController();
++  const timer = setTimeout(() => controller.abort(), 8000);
++
++  try {
++    return await fetch(url, { ...options, signal: controller.signal });
++  } catch (error) {
++    if (error?.name === "AbortError") {
++      throw new Error("Tempo limite ao criar usuario no Supabase.");
++    }
++    throw error;
++  } finally {
++    clearTimeout(timer);
++  }
++}
 
