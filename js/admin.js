@@ -461,9 +461,7 @@ async function parseApiBody(response) {
 async function requestChamados(method, payload) {
   const endpoints = [
     "/api/chamados",
-    "/api/chamados.js",
-    "/api/tickets",
-    "/api/tickets.js"
+    "/api/tickets"
   ];
   let lastBody = { error: "Nenhum endpoint respondeu." };
   let lastResponse = null;
@@ -476,7 +474,7 @@ async function requestChamados(method, payload) {
         body: payload ? JSON.stringify(payload) : undefined
       });
       const body = await parseApiBody(response);
-      if (response.ok || response.status !== 404) {
+      if (response.ok) {
         return { response, body };
       }
       lastBody = body;
