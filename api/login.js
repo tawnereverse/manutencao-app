@@ -15,16 +15,6 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Informe usuario e senha." });
     }
 
-    // 🔥 LOGIN FIXO (NUNCA FALHA)
-    if (user === "admin" && pass === "123") {
-      return res.status(200).json({
-        ok: true,
-        user: "admin",
-        role: "admin",
-        displayName: "Administrador"
-      });
-    }
-
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -33,6 +23,7 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: "Erro de configuracao" });
     }
 
+    // 🔥 CONSULTA SOMENTE NO BANCO
     const response = await fetch(
       `${supabaseUrl}/rest/v1/usuarios?login=eq.${encodeURIComponent(user)}&senha=eq.${encodeURIComponent(pass)}&limit=1`,
       {
@@ -43,14 +34,14 @@ module.exports = async (req, res) => {
       }
     );
 
-    const data = await response.json();
+    const data = await safeJson(response);
 
     if (!response.ok) {
       console.error("LOGIN ERROR:", data);
       return res.status(500).json({ error: "Erro ao consultar usuarios" });
     }
 
-    if (!data.length) {
+    if (!data || !data.length) {
       return res.status(401).json({ error: "Login invalido" });
     }
 
@@ -68,3 +59,12 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// helper
+async function safeJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
