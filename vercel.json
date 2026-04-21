@@ -3,31 +3,5 @@
     "api/**/*.js": {
       "runtime": "@vercel/node@3.2.20"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/chamados",
-      "destination": "/api/chamados.js"
-    },
-    {
-      "source": "/api/tickets",
-      "destination": "/api/tickets.js"
-    },
-    {
-      "source": "/api/login",
-      "destination": "/api/login.js"
-    },
-    {
-      "source": "/api/create-user",
-      "destination": "/api/create-user.js"
-    },
-    {
-      "source": "/api/public-config",
-      "destination": "/api/public-config.js"
-    },
-    {
-      "source": "/api/health",
-      "destination": "/api/health.js"
-    }
-  ]
+  }
 }
