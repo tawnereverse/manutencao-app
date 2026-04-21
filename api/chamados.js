@@ -32,8 +32,8 @@ async function createChamado(req, res, url, key) {
   const body = parseBody(req);
 
   const payload = {
-    solicitante_nome: clean(body.nome),
-    solicitante_email: clean(body.email),
+    nome: clean(body.nome),
+    email: clean(body.email),
     unidade: clean(body.unidade),
     setor: clean(body.setor),
     descricao: clean(body.descricao),
@@ -41,7 +41,8 @@ async function createChamado(req, res, url, key) {
     status: "aberto"
   };
 
-  if (Object.values(payload).some(v => !v)) {
+  // validação obrigatória
+  if (!payload.nome || !payload.email || !payload.unidade || !payload.setor || !payload.descricao) {
     return res.status(400).json({ error: "Campos obrigatorios faltando." });
   }
 
@@ -61,14 +62,16 @@ async function createChamado(req, res, url, key) {
 
     if (!response.ok) {
       console.error("SUPABASE INSERT ERROR:", data);
-      return res.status(500).json({
-        error: data?.message || data?.error || "Erro ao inserir chamado"
+      return res.status(response.status).json({
+        error: data?.message || data?.error || "Erro ao inserir chamado."
       });
     }
 
+    const created = Array.isArray(data) ? data[0] : data;
+
     return res.status(201).json({
       ok: true,
-      numero: data?.[0]?.numero || data?.[0]?.id || null
+      numero: created?.numero ?? created?.id ?? null
     });
 
   } catch (error) {
@@ -80,18 +83,23 @@ async function createChamado(req, res, url, key) {
 // ================== LIST ==================
 async function listChamados(res, url, key) {
   try {
-    const response = await fetch(`${url}/rest/v1/chamados?select=*`, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`
+    const response = await fetch(
+      `${url}/rest/v1/chamados?select=*&order=created_at.desc.nullslast,id.desc`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`
+        }
       }
-    });
+    );
 
     const data = await safeJson(response);
 
     if (!response.ok) {
       console.error("SUPABASE LIST ERROR:", data);
-      return res.status(500).json({ error: "Erro ao listar chamados" });
+      return res.status(response.status).json({
+        error: data?.message || data?.error || "Erro ao listar chamados."
+      });
     }
 
     return res.status(200).json({
@@ -108,11 +116,17 @@ async function listChamados(res, url, key) {
 // ================== UPDATE ==================
 async function updateChamado(req, res, url, key) {
   const body = parseBody(req);
-  const id = body.id;
+  const id = clean(body.id);
 
   if (!id) {
-    return res.status(400).json({ error: "ID obrigatorio" });
+    return res.status(400).json({ error: "ID obrigatorio." });
   }
+
+  const updatePayload = {};
+
+  if (body.status !== undefined) updatePayload.status = clean(body.status);
+  if (body.atendido_por !== undefined) updatePayload.atendido_por = clean(body.atendido_por);
+  if (body.solucao !== undefined) updatePayload.solucao = clean(body.solucao);
 
   try {
     const response = await fetch(`${url}/rest/v1/chamados?id=eq.${id}`, {
@@ -120,16 +134,19 @@ async function updateChamado(req, res, url, key) {
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(updatePayload)
     });
 
     const data = await safeJson(response);
 
     if (!response.ok) {
       console.error("SUPABASE UPDATE ERROR:", data);
-      return res.status(500).json({ error: "Erro ao atualizar chamado" });
+      return res.status(response.status).json({
+        error: data?.message || data?.error || "Erro ao atualizar chamado."
+      });
     }
 
     return res.status(200).json({ ok: true });
@@ -143,19 +160,21 @@ async function updateChamado(req, res, url, key) {
 // ================== HELPERS ==================
 function parseBody(req) {
   try {
-    return typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    return typeof req.body === "string"
+      ? JSON.parse(req.body)
+      : req.body || {};
   } catch {
     return {};
   }
 }
 
-function clean(v) {
-  return String(v || "").trim();
+function clean(value) {
+  return String(value || "").trim();
 }
 
-async function safeJson(res) {
+async function safeJson(response) {
   try {
-    return await res.json();
+    return await response.json();
   } catch {
     return null;
   }
