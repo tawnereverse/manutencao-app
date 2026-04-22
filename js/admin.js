@@ -18,6 +18,13 @@ const feedback = document.getElementById("admin-feedback");
 const adminUserCard = document.getElementById("admin-user-card");
 const createUserForm = document.getElementById("create-user-form");
 const createUserFeedback = document.getElementById("create-user-feedback");
+const createUserButton = document.getElementById("create-user-btn");
+
+// 🔥 IDs CORRETOS (DO SEU HTML ORIGINAL)
+const newUserNameInput = document.getElementById("new-user-name");
+const newUserEmailInput = document.getElementById("new-user-email");
+const newUserPasswordInput = document.getElementById("new-user-password");
+const newUserRoleInput = document.getElementById("new-user-role");
 
 const filterButtons = document.querySelectorAll(".btn-filter");
 const searchInput = document.getElementById("search-input");
@@ -39,7 +46,7 @@ async function init() {
   userNameElement.textContent = displayName;
   userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
 
-  // 🔥 MOSTRAR BLOCO ADMIN
+  // 🔥 ADMIN
   if (role === "admin") {
     adminUserCard.classList.remove("hidden");
     createUserForm.addEventListener("submit", onCreateUser);
@@ -120,6 +127,7 @@ function createTicketCard(ticket) {
     ${ticket.solucao ? `<p><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
   `;
 
+  // 🔒 BLOQUEIO
   if (isFinalizado && !isAdmin) {
     return card;
   }
@@ -196,36 +204,53 @@ async function updateTicket(id, payload) {
 }
 
 // ================== CRIAR USUARIO ==================
-async function onCreateUser(e) {
-  e.preventDefault();
+async function onCreateUser(event) {
+  event.preventDefault();
 
   clearMessage(createUserFeedback);
 
-  const fullName = document.getElementById("user-fullname").value;
-  const login = document.getElementById("user-login").value;
-  const password = document.getElementById("user-password").value;
-  const role = document.getElementById("user-role-select").value;
+  const fullName = sanitizeText(newUserNameInput.value);
+  const login = sanitizeText(newUserEmailInput.value).toLowerCase();
+  const password = newUserPasswordInput.value;
+  const role = newUserRoleInput.value;
 
-  const response = await fetch("/api/create-user", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fullName,
-      login,
-      password,
-      role
-    })
-  });
-
-  const body = await response.json();
-
-  if (!response.ok) {
-    showMessage(createUserFeedback, body.error || "Erro ao criar usuário", "error");
+  if (!fullName || !login || !password || !role) {
+    showMessage(createUserFeedback, "Preencha todos os campos.", "error");
     return;
   }
 
-  showMessage(createUserFeedback, "Usuário criado com sucesso", "success");
-  createUserForm.reset();
+  createUserButton.disabled = true;
+  createUserButton.textContent = "Criando...";
+
+  try {
+    const response = await fetch("/api/create-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        fullName,
+        login,
+        password,
+        role
+      })
+    });
+
+    const body = await response.json();
+
+    if (!response.ok) {
+      throw new Error(body.error || "Erro ao criar usuario.");
+    }
+
+    showMessage(createUserFeedback, "Usuario criado com sucesso.", "success");
+    createUserForm.reset();
+
+  } catch (error) {
+    showMessage(createUserFeedback, error.message, "error");
+  } finally {
+    createUserButton.disabled = false;
+    createUserButton.textContent = "Criar usuario";
+  }
 }
 
 // ================== REQUEST ==================
