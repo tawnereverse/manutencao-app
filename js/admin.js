@@ -148,7 +148,7 @@ function createTicketCard(ticket) {
 
   card.innerHTML = `
     <strong>#${ticket.numero}</strong>
-    <p>${ticket.descricao}</p>
+    <p><b>Problema:</b> ${ticket.descricao}</p>
     <p><b>Solicitante:</b> ${ticket.nome}</p>
     <p><b>Status:</b> ${statusText}</p>
     <p><b>Prioridade:</b> ${priorityLabel(ticket.prioridade)}</p>
