@@ -36,7 +36,7 @@ const clearButton = document.getElementById("clear-search-btn");
 const filterButtons = document.querySelectorAll(".btn-filter");
 
 let allTickets = [];
-let currentFilter = "aberto"; // 🔥 sem "todos"
+let currentFilter = "aberto";
 
 init();
 
@@ -52,14 +52,12 @@ async function init() {
   userNameElement.textContent = displayName;
   userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
 
-  // ADMIN
   if (role === "admin") {
     adminUserCard.classList.remove("hidden");
     createUserForm.addEventListener("submit", onCreateUser);
     createUserButton.addEventListener("click", onCreateUser);
   }
 
-  // FILTROS
   filterButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       currentFilter = btn.dataset.filter;
@@ -67,7 +65,6 @@ async function init() {
     });
   });
 
-  // BUSCA
   if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -110,10 +107,8 @@ function renderTickets() {
 
   let filtered = [...allTickets];
 
-  // 🔥 filtro SEM "todos"
   filtered = filtered.filter(t => t.status === currentFilter);
 
-  // 🔥 busca CORRIGIDA
   const search = String(searchInput?.value || "").toLowerCase().trim();
 
   if (search) {
@@ -150,13 +145,17 @@ function createTicketCard(ticket) {
     <strong>#${ticket.numero}</strong>
     <p><b>Problema:</b> ${ticket.descricao}</p>
     <p><b>Solicitante:</b> ${ticket.nome}</p>
+    <p><b>Email:</b> ${ticket.email || "-"}</p>
     <p><b>Status:</b> ${statusText}</p>
     <p><b>Prioridade:</b> ${priorityLabel(ticket.prioridade)}</p>
     <p><b>Abertura:</b> ${formatDate(ticket.created_at)}</p>
     ${ticket.solucao ? `<p><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
   `;
 
-  if (isFinalizado && !isAdmin) return card;
+  if (isFinalizado && !isAdmin) {
+    addShareButtons(card, ticket);
+    return card;
+  }
 
   const statusSelect = document.createElement("select");
   statusSelect.innerHTML = `
@@ -202,7 +201,45 @@ function createTicketCard(ticket) {
   });
 
   card.append(statusSelect, solutionBox, saveBtn);
+
+  // 🔥 adiciona compartilhamento também aqui
+  if (ticket.status === "finalizado") {
+    addShareButtons(card, ticket);
+  }
+
   return card;
+}
+
+// 🔥 FUNÇÃO NOVA (ISOLADA, NÃO QUEBRA NADA)
+function addShareButtons(card, ticket) {
+  const shareBox = document.createElement("div");
+  shareBox.style.marginTop = "10px";
+
+  const message = `
+Chamado #${ticket.numero}
+Problema: ${ticket.descricao}
+Status: Finalizado por ${ticket.atendido_por}
+Solução: ${ticket.solucao || "-"}
+`;
+
+  const whatsappBtn = document.createElement("button");
+  whatsappBtn.textContent = "WhatsApp";
+  whatsappBtn.onclick = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
+  const emailBtn = document.createElement("button");
+  emailBtn.textContent = "Email";
+  emailBtn.onclick = () => {
+    const subject = `Chamado #${ticket.numero} finalizado`;
+    window.location.href =
+      `mailto:${ticket.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  };
+
+  shareBox.appendChild(whatsappBtn);
+  shareBox.appendChild(emailBtn);
+
+  card.appendChild(shareBox);
 }
 
 // ================== UPDATE ==================
