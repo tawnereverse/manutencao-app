@@ -14,28 +14,29 @@ const logoutButton = document.getElementById("logout-btn");
 const ticketsContainer = document.getElementById("admin-tickets");
 const feedback = document.getElementById("admin-feedback");
 
-// 🔥 ADMIN
+// ADMIN
 const adminUserCard = document.getElementById("admin-user-card");
 const createUserForm = document.getElementById("create-user-form");
 const createUserFeedback = document.getElementById("create-user-feedback");
 const createUserButton = document.getElementById("create-user-btn");
 
-// 🔥 INPUTS USER
+// INPUTS USER
 const newUserNameInput = document.getElementById("new-user-name");
 const newUserEmailInput = document.getElementById("new-user-email");
 const newUserPasswordInput = document.getElementById("new-user-password");
 const newUserRoleInput = document.getElementById("new-user-role");
 
-// 🔥 BUSCA
+// BUSCA
 const searchForm = document.getElementById("search-form");
 const searchInput = document.getElementById("search-input");
 const searchButton = document.getElementById("search-btn");
 const clearButton = document.getElementById("clear-search-btn");
 
+// FILTRO
 const filterButtons = document.querySelectorAll(".btn-filter");
 
 let allTickets = [];
-let currentFilter = "todos";
+let currentFilter = "aberto"; // 🔥 sem "todos"
 
 init();
 
@@ -51,14 +52,14 @@ async function init() {
   userNameElement.textContent = displayName;
   userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
 
-  // 🔥 ADMIN
+  // ADMIN
   if (role === "admin") {
     adminUserCard.classList.remove("hidden");
     createUserForm.addEventListener("submit", onCreateUser);
     createUserButton.addEventListener("click", onCreateUser);
   }
 
-  // 🔥 FILTROS
+  // FILTROS
   filterButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       currentFilter = btn.dataset.filter;
@@ -66,7 +67,7 @@ async function init() {
     });
   });
 
-  // 🔥 BUSCA (FIX)
+  // BUSCA
   if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -109,13 +110,11 @@ function renderTickets() {
 
   let filtered = [...allTickets];
 
-  // filtro status
-  if (currentFilter !== "todos") {
-    filtered = filtered.filter(t => t.status === currentFilter);
-  }
+  // 🔥 filtro SEM "todos"
+  filtered = filtered.filter(t => t.status === currentFilter);
 
-  // 🔥 filtro busca (fix)
-  const search = sanitizeText(searchInput?.value || "").toLowerCase();
+  // 🔥 busca CORRIGIDA
+  const search = String(searchInput?.value || "").toLowerCase().trim();
 
   if (search) {
     filtered = filtered.filter(t =>
