@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // 🔥 validação crítica
+  // validação
   if (!supabaseUrl || !serviceRole) {
     console.error("ENV ERROR:", { supabaseUrl, serviceRole });
     return res.status(500).json({
@@ -41,7 +41,6 @@ async function createChamado(req, res, url, key) {
     status: "aberto"
   };
 
-  // validação obrigatória
   if (!payload.nome || !payload.email || !payload.unidade || !payload.setor || !payload.descricao) {
     return res.status(400).json({ error: "Campos obrigatorios faltando." });
   }
@@ -116,6 +115,9 @@ async function listChamados(res, url, key) {
 // ================== UPDATE ==================
 async function updateChamado(req, res, url, key) {
   const body = parseBody(req);
+
+  console.log("BODY RECEBIDO:", body); // 🔥 debug
+
   const id = clean(body.id);
 
   if (!id) {
@@ -124,9 +126,19 @@ async function updateChamado(req, res, url, key) {
 
   const updatePayload = {};
 
-  if (body.status !== undefined) updatePayload.status = clean(body.status);
-  if (body.atendido_por !== undefined) updatePayload.atendido_por = clean(body.atendido_por);
-  if (body.solucao !== undefined) updatePayload.solucao = clean(body.solucao);
+  if (body.status !== undefined) {
+    updatePayload.status = clean(body.status);
+  }
+
+  if (body.atendido_por !== undefined) {
+    updatePayload.atendido_por = clean(body.atendido_por);
+  }
+
+  if (body.solucao !== undefined) {
+    updatePayload.solucao = clean(body.solucao);
+  }
+
+  console.log("PAYLOAD FINAL:", updatePayload); // 🔥 debug
 
   try {
     const response = await fetch(`${url}/rest/v1/chamados?id=eq.${id}`, {
@@ -148,6 +160,8 @@ async function updateChamado(req, res, url, key) {
         error: data?.message || data?.error || "Erro ao atualizar chamado."
       });
     }
+
+    console.log("UPDATE OK:", data); // 🔥 debug
 
     return res.status(200).json({ ok: true });
 
