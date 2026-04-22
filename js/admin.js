@@ -14,6 +14,11 @@ const logoutButton = document.getElementById("logout-btn");
 const ticketsContainer = document.getElementById("admin-tickets");
 const feedback = document.getElementById("admin-feedback");
 
+// 🔥 ADMIN
+const adminUserCard = document.getElementById("admin-user-card");
+const createUserForm = document.getElementById("create-user-form");
+const createUserFeedback = document.getElementById("create-user-feedback");
+
 const filterButtons = document.querySelectorAll(".btn-filter");
 const searchInput = document.getElementById("search-input");
 
@@ -34,7 +39,13 @@ async function init() {
   userNameElement.textContent = displayName;
   userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
 
-  // 🔥 ativa botões de filtro
+  // 🔥 MOSTRAR BLOCO ADMIN
+  if (role === "admin") {
+    adminUserCard.classList.remove("hidden");
+    createUserForm.addEventListener("submit", onCreateUser);
+  }
+
+  // 🔥 FILTROS
   filterButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       currentFilter = btn.dataset.filter;
@@ -45,6 +56,7 @@ async function init() {
   await loadTickets();
 }
 
+// ================== CHAMADOS ==================
 async function loadTickets() {
   const { response, body } = await requestChamados("GET");
 
@@ -62,12 +74,10 @@ function renderTickets() {
 
   let filtered = [...allTickets];
 
-  // 🔥 FILTRO POR STATUS
   if (currentFilter !== "todos") {
     filtered = filtered.filter(t => t.status === currentFilter);
   }
 
-  // 🔥 FILTRO POR BUSCA
   const search = (searchInput?.value || "").toLowerCase();
   if (search) {
     filtered = filtered.filter(t =>
@@ -107,10 +117,9 @@ function createTicketCard(ticket) {
     <p><b>Prioridade:</b> ${priorityLabel(ticket.prioridade)}</p>
     <p><b>Abertura:</b> ${formatDate(ticket.created_at)}</p>
 
-    ${ticket.solucao ? `<p style="margin-top:10px;"><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
+    ${ticket.solucao ? `<p><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
   `;
 
-  // 🔒 bloqueio técnico
   if (isFinalizado && !isAdmin) {
     return card;
   }
@@ -170,6 +179,7 @@ function createTicketCard(ticket) {
   return card;
 }
 
+// ================== UPDATE ==================
 async function updateTicket(id, payload) {
   const { response } = await requestChamados("PATCH", {
     id,
@@ -185,6 +195,40 @@ async function updateTicket(id, payload) {
   await loadTickets();
 }
 
+// ================== CRIAR USUARIO ==================
+async function onCreateUser(e) {
+  e.preventDefault();
+
+  clearMessage(createUserFeedback);
+
+  const fullName = document.getElementById("user-fullname").value;
+  const login = document.getElementById("user-login").value;
+  const password = document.getElementById("user-password").value;
+  const role = document.getElementById("user-role-select").value;
+
+  const response = await fetch("/api/create-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fullName,
+      login,
+      password,
+      role
+    })
+  });
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    showMessage(createUserFeedback, body.error || "Erro ao criar usuário", "error");
+    return;
+  }
+
+  showMessage(createUserFeedback, "Usuário criado com sucesso", "success");
+  createUserForm.reset();
+}
+
+// ================== REQUEST ==================
 async function requestChamados(method, payload) {
   const response = await fetch("/api/chamados", {
     method,
@@ -197,13 +241,12 @@ async function requestChamados(method, payload) {
   let body = {};
   try {
     body = JSON.parse(text);
-  } catch {
-    body = {};
-  }
+  } catch {}
 
   return { response, body };
 }
 
+// ================== LOGOUT ==================
 logoutButton.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "./login.html";
