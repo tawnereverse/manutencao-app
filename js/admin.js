@@ -14,6 +14,12 @@ const logoutButton = document.getElementById("logout-btn");
 const ticketsContainer = document.getElementById("admin-tickets");
 const feedback = document.getElementById("admin-feedback");
 
+const filterButtons = document.querySelectorAll(".btn-filter");
+const searchInput = document.getElementById("search-input");
+
+let allTickets = [];
+let currentFilter = "todos";
+
 init();
 
 async function init() {
@@ -28,12 +34,18 @@ async function init() {
   userNameElement.textContent = displayName;
   userRoleElement.textContent = `Perfil: ${friendlyRole(role)}`;
 
+  // 🔥 ativa botões de filtro
+  filterButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentFilter = btn.dataset.filter;
+      renderTickets();
+    });
+  });
+
   await loadTickets();
 }
 
 async function loadTickets() {
-  clearMessage(feedback);
-
   const { response, body } = await requestChamados("GET");
 
   if (!response || !response.ok) {
@@ -41,13 +53,36 @@ async function loadTickets() {
     return;
   }
 
-  renderTickets(body.data || []);
+  allTickets = body.data || [];
+  renderTickets();
 }
 
-function renderTickets(tickets) {
+function renderTickets() {
   ticketsContainer.innerHTML = "";
 
-  tickets.forEach(ticket => {
+  let filtered = [...allTickets];
+
+  // 🔥 FILTRO POR STATUS
+  if (currentFilter !== "todos") {
+    filtered = filtered.filter(t => t.status === currentFilter);
+  }
+
+  // 🔥 FILTRO POR BUSCA
+  const search = (searchInput?.value || "").toLowerCase();
+  if (search) {
+    filtered = filtered.filter(t =>
+      `${t.numero} ${t.descricao} ${t.nome}`
+        .toLowerCase()
+        .includes(search)
+    );
+  }
+
+  if (!filtered.length) {
+    ticketsContainer.innerHTML = "<p>Nenhum chamado encontrado.</p>";
+    return;
+  }
+
+  filtered.forEach(ticket => {
     ticketsContainer.appendChild(createTicketCard(ticket));
   });
 }
@@ -75,7 +110,7 @@ function createTicketCard(ticket) {
     ${ticket.solucao ? `<p style="margin-top:10px;"><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
   `;
 
-  // 🔒 BLOQUEIO: técnico não edita finalizado
+  // 🔒 bloqueio técnico
   if (isFinalizado && !isAdmin) {
     return card;
   }
@@ -136,15 +171,13 @@ function createTicketCard(ticket) {
 }
 
 async function updateTicket(id, payload) {
-  clearMessage(feedback);
-
-  const { response, body } = await requestChamados("PATCH", {
+  const { response } = await requestChamados("PATCH", {
     id,
     ...payload
   });
 
   if (!response || !response.ok) {
-    showMessage(feedback, body.error || "Erro ao atualizar", "error");
+    showMessage(feedback, "Erro ao atualizar", "error");
     return;
   }
 
@@ -165,15 +198,13 @@ async function requestChamados(method, payload) {
   try {
     body = JSON.parse(text);
   } catch {
-    body = { raw: text };
+    body = {};
   }
 
   return { response, body };
 }
 
-function onLogout() {
+logoutButton.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "./login.html";
-}
-
-logoutButton.addEventListener("click", onLogout);
+});
