@@ -20,14 +20,19 @@ const createUserForm = document.getElementById("create-user-form");
 const createUserFeedback = document.getElementById("create-user-feedback");
 const createUserButton = document.getElementById("create-user-btn");
 
-// 🔥 IDs DO HTML ORIGINAL
+// 🔥 INPUTS USER
 const newUserNameInput = document.getElementById("new-user-name");
 const newUserEmailInput = document.getElementById("new-user-email");
 const newUserPasswordInput = document.getElementById("new-user-password");
 const newUserRoleInput = document.getElementById("new-user-role");
 
-const filterButtons = document.querySelectorAll(".btn-filter");
+// 🔥 BUSCA
+const searchForm = document.getElementById("search-form");
 const searchInput = document.getElementById("search-input");
+const searchButton = document.getElementById("search-btn");
+const clearButton = document.getElementById("clear-search-btn");
+
+const filterButtons = document.querySelectorAll(".btn-filter");
 
 let allTickets = [];
 let currentFilter = "todos";
@@ -49,8 +54,6 @@ async function init() {
   // 🔥 ADMIN
   if (role === "admin") {
     adminUserCard.classList.remove("hidden");
-
-    // 🔥 GARANTE FUNCIONAMENTO TOTAL
     createUserForm.addEventListener("submit", onCreateUser);
     createUserButton.addEventListener("click", onCreateUser);
   }
@@ -62,6 +65,28 @@ async function init() {
       renderTickets();
     });
   });
+
+  // 🔥 BUSCA (FIX)
+  if (searchForm) {
+    searchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      renderTickets();
+    });
+  }
+
+  if (searchButton) {
+    searchButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      renderTickets();
+    });
+  }
+
+  if (clearButton) {
+    clearButton.addEventListener("click", () => {
+      searchInput.value = "";
+      renderTickets();
+    });
+  }
 
   await loadTickets();
 }
@@ -84,11 +109,14 @@ function renderTickets() {
 
   let filtered = [...allTickets];
 
+  // filtro status
   if (currentFilter !== "todos") {
     filtered = filtered.filter(t => t.status === currentFilter);
   }
 
-  const search = (searchInput?.value || "").toLowerCase();
+  // 🔥 filtro busca (fix)
+  const search = sanitizeText(searchInput?.value || "").toLowerCase();
+
   if (search) {
     filtered = filtered.filter(t =>
       `${t.numero} ${t.descricao} ${t.nome}`
@@ -126,14 +154,10 @@ function createTicketCard(ticket) {
     <p><b>Status:</b> ${statusText}</p>
     <p><b>Prioridade:</b> ${priorityLabel(ticket.prioridade)}</p>
     <p><b>Abertura:</b> ${formatDate(ticket.created_at)}</p>
-
     ${ticket.solucao ? `<p><b>Solução:</b><br>${ticket.solucao}</p>` : ""}
   `;
 
-  // 🔒 BLOQUEIO
-  if (isFinalizado && !isAdmin) {
-    return card;
-  }
+  if (isFinalizado && !isAdmin) return card;
 
   const statusSelect = document.createElement("select");
   statusSelect.innerHTML = `
@@ -158,27 +182,20 @@ function createTicketCard(ticket) {
   saveBtn.textContent = "Salvar";
 
   saveBtn.addEventListener("click", async () => {
-    const payload = {
-      status: statusSelect.value
-    };
+    const payload = { status: statusSelect.value };
 
     const displayName = localStorage.getItem("displayName");
 
-    if (
-      statusSelect.value === "andamento" ||
-      statusSelect.value === "finalizado"
-    ) {
+    if (["andamento", "finalizado"].includes(statusSelect.value)) {
       payload.atendido_por = displayName;
     }
 
     if (statusSelect.value === "finalizado") {
       const solucao = sanitizeText(solutionBox.value);
-
       if (!solucao) {
         alert("Informe a solução.");
         return;
       }
-
       payload.solucao = solucao;
     }
 
@@ -186,7 +203,6 @@ function createTicketCard(ticket) {
   });
 
   card.append(statusSelect, solutionBox, saveBtn);
-
   return card;
 }
 
@@ -228,15 +244,8 @@ async function onCreateUser(event) {
   try {
     const response = await fetch("/api/create-user", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        fullName,
-        login,
-        password,
-        role
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName, login, password, role })
     });
 
     const body = await response.json();
