@@ -20,7 +20,7 @@ const createUserForm = document.getElementById("create-user-form");
 const createUserFeedback = document.getElementById("create-user-feedback");
 const createUserButton = document.getElementById("create-user-btn");
 
-// 🔥 IDs CORRETOS (DO SEU HTML ORIGINAL)
+// 🔥 IDs DO HTML ORIGINAL
 const newUserNameInput = document.getElementById("new-user-name");
 const newUserEmailInput = document.getElementById("new-user-email");
 const newUserPasswordInput = document.getElementById("new-user-password");
@@ -49,7 +49,10 @@ async function init() {
   // 🔥 ADMIN
   if (role === "admin") {
     adminUserCard.classList.remove("hidden");
+
+    // 🔥 GARANTE FUNCIONAMENTO TOTAL
     createUserForm.addEventListener("submit", onCreateUser);
+    createUserButton.addEventListener("click", onCreateUser);
   }
 
   // 🔥 FILTROS
