@@ -406,6 +406,7 @@ button:hover,
   color: #fff;
 }
 
+.priority-field,
 .deadline-field {
   margin-top: 2px;
 }

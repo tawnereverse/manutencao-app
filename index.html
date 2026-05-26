@@ -52,14 +52,6 @@
           <textarea id="descricao" maxlength="500" required placeholder="Descreva o problema com detalhes"></textarea>
         </label>
 
-        <label class="field">
-          <span>Prioridade</span>
-          <select id="prioridade" required>
-            <option value="normal">Normal</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </label>
-
         <button id="submit-ticket-btn" type="submit">Enviar chamado</button>
       </form>
       <p id="ticket-feedback" class="message hidden" role="status" aria-live="polite"></p>
@@ -76,8 +68,7 @@
       email: document.getElementById("email"),
       unidade: document.getElementById("unidade"),
       setor: document.getElementById("setor"),
-      descricao: document.getElementById("descricao"),
-      prioridade: document.getElementById("prioridade")
+      descricao: document.getElementById("descricao")
     };
 
     form.addEventListener("submit", async (event) => {
@@ -89,11 +80,10 @@
         email: String(fields.email.value || "").trim().toLowerCase(),
         unidade: fields.unidade.value,
         setor: sanitize(fields.setor.value),
-        descricao: sanitize(fields.descricao.value),
-        prioridade: fields.prioridade.value
+        descricao: sanitize(fields.descricao.value)
       };
 
-      if (!payload.nome || !payload.email || !payload.unidade || !payload.setor || !payload.descricao || !payload.prioridade) {
+      if (!payload.nome || !payload.email || !payload.unidade || !payload.setor || !payload.descricao) {
         setFeedback("Preencha todos os campos obrigatorios.", "error");
         return;
       }
