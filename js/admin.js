@@ -201,7 +201,7 @@ function createTicketCard(ticket) {
     <p><b>Status:</b> ${escapeHtml(statusText)}</p>
     <p><b>Prioridade:</b> <span class="${priorityBadgeClass(ticket.prioridade)}">${escapeHtml(priorityLabel(ticket.prioridade))}</span></p>
     <p><b>Abertura:</b> ${escapeHtml(formatDate(ticket.created_at))}</p>
-    <p><b>Termino do servico:</b> ${escapeHtml(dueDateText)}</p>
+    <p><b>Serviço será finalizado até:</b> ${escapeHtml(dueDateText)}</p>
     ${ticket.solucao ? `<p><b>Solucao:</b><br>${escapeHtml(ticket.solucao)}</p>` : ""}
   `;
 
@@ -211,11 +211,9 @@ function createTicketCard(ticket) {
   }
 
   const statusSelect = document.createElement("select");
-  statusSelect.innerHTML = `
-    <option value="aberto">Aberto</option>
-    <option value="andamento">Em andamento</option>
-    <option value="finalizado">Finalizado</option>
-  `;
+  statusSelect.innerHTML = allowedStatusOptions(ticket.status, isAdmin)
+    .map(status => `<option value="${status}">${statusLabel(status)}</option>`)
+    .join("");
   statusSelect.value = ticket.status;
 
   const priorityField = document.createElement("label");
@@ -243,14 +241,14 @@ function createTicketCard(ticket) {
   deadlineField.className = "field deadline-field";
 
   const deadlineLabel = document.createElement("span");
-  deadlineLabel.textContent = "Data de termino do servico";
+  deadlineLabel.textContent = "Serviço será finalizado até";
 
   const deadlineInput = document.createElement("input");
   deadlineInput.type = "date";
   deadlineInput.value = normalizeDateInput(ticket.data_termino_servico);
   deadlineInput.disabled = !canEditServicePlan;
   deadlineInput.title = canEditServicePlan
-    ? "Defina a data de termino do servico"
+    ? "Defina ate qual dia o servico sera finalizado"
     : "Data bloqueada. Somente administradores podem alterar.";
 
   deadlineField.append(deadlineLabel, deadlineInput);
@@ -317,6 +315,22 @@ function createTicketCard(ticket) {
   return card;
 }
 
+function allowedStatusOptions(currentStatus, isAdmin) {
+  if (isAdmin) {
+    return ["aberto", "andamento", "finalizado"];
+  }
+
+  if (currentStatus === "finalizado") {
+    return ["finalizado"];
+  }
+
+  if (currentStatus === "andamento") {
+    return ["andamento", "finalizado"];
+  }
+
+  return ["aberto", "andamento", "finalizado"];
+}
+
 function addShareButtons(card, ticket) {
   const shareBox = document.createElement("div");
   shareBox.style.marginTop = "10px";
@@ -329,7 +343,7 @@ function addShareButtons(card, ticket) {
 Chamado #${ticket.numero}
 Problema: ${ticket.descricao}
 Status: Finalizado por ${ticket.atendido_por}
-Termino do servico: ${dueDateText}
+Servico sera finalizado ate: ${dueDateText}
 Solucao: ${ticket.solucao || "-"}
 `;
 
