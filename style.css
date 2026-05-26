@@ -9,6 +9,8 @@
   --brand-strong: #003a66;
   --brand-soft: #e6f2ff;
   --alert: #c62828;
+  --alert-soft: #fff1f2;
+  --alert-line: #fecdd3;
   --ok: #0f766e;
   --warn: #a16207;
   --chip-open: #ffedd5;
@@ -236,6 +238,23 @@ button:hover,
   background: #fff;
 }
 
+.ticket-overdue {
+  border-color: var(--alert);
+  background: linear-gradient(180deg, var(--alert-soft), #fff);
+  box-shadow: 0 12px 26px rgb(198 40 40 / 14%);
+}
+
+.deadline-alert {
+  margin: 8px 0;
+  border: 1px solid var(--alert-line);
+  border-left: 5px solid var(--alert);
+  border-radius: 10px;
+  background: #fff5f5;
+  color: var(--alert);
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
 .ticket-head {
   display: flex;
   justify-content: space-between;
@@ -335,6 +354,16 @@ button:hover,
   background: #fff;
 }
 
+.dash-card.overdue {
+  border-color: var(--alert);
+  background: var(--alert-soft);
+}
+
+.dash-card.overdue .dash-label,
+.dash-card.overdue .dash-value {
+  color: var(--alert);
+}
+
 .dash-label {
   margin: 0;
   color: var(--muted);
@@ -375,6 +404,10 @@ button:hover,
 .btn-filter.active {
   background: var(--brand);
   color: #fff;
+}
+
+.deadline-field {
+  margin-top: 2px;
 }
 
 @media (max-width: 900px) {
