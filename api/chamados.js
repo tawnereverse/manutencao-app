@@ -37,7 +37,7 @@ async function createChamado(req, res, url, key) {
     unidade: clean(body.unidade),
     setor: clean(body.setor),
     descricao: clean(body.descricao),
-    prioridade: clean(body.prioridade) || "normal",
+    prioridade: "normal",
     status: "aberto"
   };
 
@@ -130,6 +130,16 @@ async function updateChamado(req, res, url, key) {
     updatePayload.status = clean(body.status);
   }
 
+  if (body.prioridade !== undefined) {
+    const prioridade = cleanPriority(body.prioridade);
+    if (!prioridade) {
+      return res.status(400).json({
+        error: "Prioridade invalida."
+      });
+    }
+    updatePayload.prioridade = prioridade;
+  }
+
   if (body.atendido_por !== undefined) {
     updatePayload.atendido_por = clean(body.atendido_por);
   }
@@ -194,6 +204,11 @@ function parseBody(req) {
 
 function clean(value) {
   return String(value || "").trim();
+}
+
+function cleanPriority(value) {
+  const priority = clean(value).toLowerCase();
+  return ["normal", "urgente"].includes(priority) ? priority : null;
 }
 
 function cleanDate(value) {
