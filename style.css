@@ -421,17 +421,55 @@ button:hover,
 
 .btn-filter {
   background: #fff;
+  border-color: #cfe0f3;
+  color: var(--brand-strong);
+  font-weight: 600;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-filter:hover {
+  background: var(--brand-soft);
+  border-color: #9cc8f5;
   color: var(--brand-strong);
 }
 
-.btn-filter.active {
+.btn-filter.active,
+.btn-filter[aria-pressed="true"] {
   background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(0 79 140 / 22%);
+}
+
+.btn-filter.active:hover,
+.btn-filter[aria-pressed="true"]:hover {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
   color: #fff;
 }
 
 .priority-field,
 .deadline-field {
   margin-top: 2px;
+}
+
+.priority-field select:disabled,
+.deadline-field input:disabled {
+  background: #f1f5f9;
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.lock-note {
+  margin: 4px 0 2px 0;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
