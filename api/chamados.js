@@ -138,6 +138,16 @@ async function updateChamado(req, res, url, key) {
     updatePayload.solucao = clean(body.solucao);
   }
 
+  if (body.data_termino_servico !== undefined) {
+    const dataTermino = cleanDate(body.data_termino_servico);
+    if (dataTermino === false) {
+      return res.status(400).json({
+        error: "Data de termino do servico invalida."
+      });
+    }
+    updatePayload.data_termino_servico = dataTermino;
+  }
+
   console.log("PAYLOAD FINAL:", updatePayload); // 🔥 debug
 
   try {
@@ -184,6 +194,26 @@ function parseBody(req) {
 
 function clean(value) {
   return String(value || "").trim();
+}
+
+function cleanDate(value) {
+  const text = clean(value);
+  if (!text) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return false;
+  }
+
+  const [year, month, day] = text.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const isValid =
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day;
+
+  return isValid ? text : false;
 }
 
 async function safeJson(response) {
