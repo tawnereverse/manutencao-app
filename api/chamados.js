@@ -126,12 +126,25 @@ async function updateChamado(req, res, url, key) {
 
   const actorRole = clean(body.actor_role).toLowerCase();
   const isAdminActor = actorRole === "admin";
+  const requestedStatus = body.status !== undefined ? cleanStatus(body.status) : null;
+  const wantsStatusChange = body.status !== undefined;
   const wantsServicePlanChange =
     body.prioridade !== undefined ||
     body.data_termino_servico !== undefined;
 
+  if (wantsStatusChange && !requestedStatus) {
+    return res.status(400).json({
+      error: "Status invalido."
+    });
+  }
+
+  let currentChamado = null;
+
+  if ((wantsServicePlanChange || wantsStatusChange) && !isAdminActor) {
+    currentChamado = await getChamadoById(url, key, id);
+  }
+
   if (wantsServicePlanChange && !isAdminActor) {
-    const currentChamado = await getChamadoById(url, key, id);
     if (currentChamado?.data_termino_servico) {
       return res.status(403).json({
         error: "Somente administradores podem alterar prioridade e prazo depois que a data de termino foi definida."
@@ -139,10 +152,22 @@ async function updateChamado(req, res, url, key) {
     }
   }
 
+  if (wantsStatusChange && !isAdminActor) {
+    const currentStatus = currentChamado?.status;
+    const isReturningToOpen = currentStatus === "andamento" && requestedStatus === "aberto";
+    const isReopeningFinalized = currentStatus === "finalizado" && requestedStatus !== "finalizado";
+
+    if (isReturningToOpen || isReopeningFinalized) {
+      return res.status(403).json({
+        error: "Tecnicos nao podem retornar chamados para status anteriores."
+      });
+    }
+  }
+
   const updatePayload = {};
 
   if (body.status !== undefined) {
-    updatePayload.status = clean(body.status);
+    updatePayload.status = requestedStatus;
   }
 
   if (body.prioridade !== undefined) {
@@ -226,6 +251,11 @@ function cleanPriority(value) {
   return ["normal", "urgente"].includes(priority) ? priority : null;
 }
 
+function cleanStatus(value) {
+  const status = clean(value).toLowerCase();
+  return ["aberto", "andamento", "finalizado"].includes(status) ? status : null;
+}
+
 function cleanDate(value) {
   const text = clean(value);
   if (!text) {
@@ -256,7 +286,7 @@ async function safeJson(response) {
 
 async function getChamadoById(url, key, id) {
   const response = await fetch(
-    `${url}/rest/v1/chamados?select=id,data_termino_servico&id=eq.${encodeURIComponent(id)}&limit=1`,
+    `${url}/rest/v1/chamados?select=id,status,data_termino_servico&id=eq.${encodeURIComponent(id)}&limit=1`,
     {
       headers: {
         apikey: key,
