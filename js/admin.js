@@ -60,6 +60,7 @@ async function init() {
   }
 
   filterButtons.forEach(btn => {
+    btn.setAttribute("aria-pressed", String(btn.dataset.filter === currentFilter));
     btn.addEventListener("click", () => {
       currentFilter = btn.dataset.filter;
       renderTickets();
@@ -106,6 +107,7 @@ async function loadTickets() {
 
 function renderTickets() {
   ticketsContainer.innerHTML = "";
+  updateFilterButtons();
 
   let filtered = [...allTickets];
 
@@ -128,6 +130,17 @@ function renderTickets() {
 
   filtered.forEach(ticket => {
     ticketsContainer.appendChild(createTicketCard(ticket));
+  });
+}
+
+function updateFilterButtons() {
+  filterButtons.forEach(btn => {
+    const isActive = btn.dataset.filter === currentFilter;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", String(isActive));
+    btn.title = isActive
+      ? `Guia atual: ${statusLabel(currentFilter)}`
+      : `Ver chamados ${btn.textContent.trim().toLowerCase()}`;
   });
 }
 
@@ -167,6 +180,8 @@ function createTicketCard(ticket) {
   const isAdmin = role === "admin";
   const isFinalizado = ticket.status === "finalizado";
   const isOverdue = isTicketOverdue(ticket);
+  const hasLockedServicePlan = Boolean(normalizeDateInput(ticket.data_termino_servico));
+  const canEditServicePlan = isAdmin || !hasLockedServicePlan;
   const requesterName = ticketRequesterName(ticket);
   const requesterEmail = ticketRequesterEmail(ticket);
   const dueDateText = formatDateOnly(ticket.data_termino_servico);
@@ -217,6 +232,10 @@ function createTicketCard(ticket) {
   prioritySelect.value = ["normal", "urgente"].includes(ticket.prioridade)
     ? ticket.prioridade
     : "normal";
+  prioritySelect.disabled = !canEditServicePlan;
+  prioritySelect.title = canEditServicePlan
+    ? "Defina a prioridade do atendimento"
+    : "Prioridade bloqueada. Somente administradores podem alterar.";
 
   priorityField.append(priorityLabelElement, prioritySelect);
 
@@ -229,8 +248,16 @@ function createTicketCard(ticket) {
   const deadlineInput = document.createElement("input");
   deadlineInput.type = "date";
   deadlineInput.value = normalizeDateInput(ticket.data_termino_servico);
+  deadlineInput.disabled = !canEditServicePlan;
+  deadlineInput.title = canEditServicePlan
+    ? "Defina a data de termino do servico"
+    : "Data bloqueada. Somente administradores podem alterar.";
 
   deadlineField.append(deadlineLabel, deadlineInput);
+
+  const lockNote = document.createElement("p");
+  lockNote.className = "lock-note";
+  lockNote.textContent = "Prazo e prioridade bloqueados para tecnico. Somente administradores podem alterar.";
 
   const solutionBox = document.createElement("textarea");
   solutionBox.placeholder = "Descreva a solucao...";
@@ -249,9 +276,13 @@ function createTicketCard(ticket) {
   saveBtn.addEventListener("click", async () => {
     const payload = {
       status: statusSelect.value,
-      prioridade: prioritySelect.value,
-      data_termino_servico: deadlineInput.value || null
+      actor_role: role
     };
+
+    if (canEditServicePlan) {
+      payload.prioridade = prioritySelect.value;
+      payload.data_termino_servico = deadlineInput.value || null;
+    }
 
     const displayName = localStorage.getItem("displayName");
 
@@ -271,7 +302,13 @@ function createTicketCard(ticket) {
     await updateTicket(ticket.id, payload);
   });
 
-  card.append(statusSelect, priorityField, deadlineField, solutionBox, saveBtn);
+  card.append(statusSelect, priorityField, deadlineField);
+
+  if (!canEditServicePlan) {
+    card.append(lockNote);
+  }
+
+  card.append(solutionBox, saveBtn);
 
   if (ticket.status === "finalizado") {
     addShareButtons(card, ticket);
