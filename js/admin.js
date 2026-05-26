@@ -184,7 +184,7 @@ function createTicketCard(ticket) {
     <p><b>Solicitante:</b> ${escapeHtml(requesterName)}</p>
     <p><b>Email:</b> ${escapeHtml(requesterEmail)}</p>
     <p><b>Status:</b> ${escapeHtml(statusText)}</p>
-    <p><b>Prioridade:</b> ${escapeHtml(priorityLabel(ticket.prioridade))}</p>
+    <p><b>Prioridade:</b> <span class="${priorityBadgeClass(ticket.prioridade)}">${escapeHtml(priorityLabel(ticket.prioridade))}</span></p>
     <p><b>Abertura:</b> ${escapeHtml(formatDate(ticket.created_at))}</p>
     <p><b>Termino do servico:</b> ${escapeHtml(dueDateText)}</p>
     ${ticket.solucao ? `<p><b>Solucao:</b><br>${escapeHtml(ticket.solucao)}</p>` : ""}
@@ -379,6 +379,12 @@ function ticketRequesterName(ticket) {
 
 function ticketRequesterEmail(ticket) {
   return ticket?.email || ticket?.solicitante_email || "-";
+}
+
+function priorityBadgeClass(priority) {
+  return priority === "urgente"
+    ? "priority-badge priority-urgent"
+    : "priority-badge priority-normal";
 }
 
 function escapeHtml(value) {
