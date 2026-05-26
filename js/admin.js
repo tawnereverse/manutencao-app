@@ -203,6 +203,23 @@ function createTicketCard(ticket) {
   `;
   statusSelect.value = ticket.status;
 
+  const priorityField = document.createElement("label");
+  priorityField.className = "field priority-field";
+
+  const priorityLabelElement = document.createElement("span");
+  priorityLabelElement.textContent = "Prioridade";
+
+  const prioritySelect = document.createElement("select");
+  prioritySelect.innerHTML = `
+    <option value="normal">Normal</option>
+    <option value="urgente">Urgente</option>
+  `;
+  prioritySelect.value = ["normal", "urgente"].includes(ticket.prioridade)
+    ? ticket.prioridade
+    : "normal";
+
+  priorityField.append(priorityLabelElement, prioritySelect);
+
   const deadlineField = document.createElement("label");
   deadlineField.className = "field deadline-field";
 
@@ -232,6 +249,7 @@ function createTicketCard(ticket) {
   saveBtn.addEventListener("click", async () => {
     const payload = {
       status: statusSelect.value,
+      prioridade: prioritySelect.value,
       data_termino_servico: deadlineInput.value || null
     };
 
@@ -253,7 +271,7 @@ function createTicketCard(ticket) {
     await updateTicket(ticket.id, payload);
   });
 
-  card.append(statusSelect, deadlineField, solutionBox, saveBtn);
+  card.append(statusSelect, priorityField, deadlineField, solutionBox, saveBtn);
 
   if (ticket.status === "finalizado") {
     addShareButtons(card, ticket);
