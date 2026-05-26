@@ -124,6 +124,21 @@ async function updateChamado(req, res, url, key) {
     return res.status(400).json({ error: "ID obrigatorio." });
   }
 
+  const actorRole = clean(body.actor_role).toLowerCase();
+  const isAdminActor = actorRole === "admin";
+  const wantsServicePlanChange =
+    body.prioridade !== undefined ||
+    body.data_termino_servico !== undefined;
+
+  if (wantsServicePlanChange && !isAdminActor) {
+    const currentChamado = await getChamadoById(url, key, id);
+    if (currentChamado?.data_termino_servico) {
+      return res.status(403).json({
+        error: "Somente administradores podem alterar prioridade e prazo depois que a data de termino foi definida."
+      });
+    }
+  }
+
   const updatePayload = {};
 
   if (body.status !== undefined) {
@@ -237,4 +252,23 @@ async function safeJson(response) {
   } catch {
     return null;
   }
+}
+
+async function getChamadoById(url, key, id) {
+  const response = await fetch(
+    `${url}/rest/v1/chamados?select=id,data_termino_servico&id=eq.${encodeURIComponent(id)}&limit=1`,
+    {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    }
+  );
+
+  const data = await safeJson(response);
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || "Erro ao consultar chamado.");
+  }
+
+  return Array.isArray(data) ? data[0] : null;
 }
